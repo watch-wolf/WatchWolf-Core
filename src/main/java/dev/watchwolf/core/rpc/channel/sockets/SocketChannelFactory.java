@@ -3,9 +3,9 @@ package dev.watchwolf.core.rpc.channel.sockets;
 import dev.watchwolf.core.rpc.channel.ChannelFactory;
 import dev.watchwolf.core.rpc.channel.MessageChannel;
 
-public class SocketChannelFactory implements ChannelFactory {
-    private final String host;
-    private final int port;
+public abstract class SocketChannelFactory implements ChannelFactory {
+    protected final String host;
+    protected final int port;
 
     public SocketChannelFactory(String host, int port) {
         this.host = host;
@@ -13,7 +13,5 @@ public class SocketChannelFactory implements ChannelFactory {
     }
 
     @Override
-    public MessageChannel build() {
-        return new SocketMessageChannel(this.host, this.port);
-    }
+    public abstract MessageChannel build();
 }
