@@ -8,7 +8,7 @@ import java.util.List;
 
 public class RPCConverter<T extends RPCObject> {
     private final Class<T> locallyConverting;
-    private final List<RPCConverter> subconverters;
+    private final List<RPCConverter<?>> subconverters;
 
     protected RPCConverter(Class<T> converting) {
         this.subconverters = new ArrayList<>();
@@ -26,7 +26,7 @@ public class RPCConverter<T extends RPCObject> {
             return this.performWrap(obj);
         }
 
-        for (RPCConverter subconverter : this.subconverters) {
+        for (RPCConverter<?> subconverter : this.subconverters) {
             if (!subconverter.canWrap(obj.getClass())) continue; // this sub-class doesn't implement the type
 
             return subconverter.wrap(obj);
@@ -42,7 +42,7 @@ public class RPCConverter<T extends RPCObject> {
             return this.performUnwrap(this.locallyConverting.cast(obj));
         }
 
-        for (RPCConverter subconverter : this.subconverters) {
+        for (RPCConverter<?> subconverter : this.subconverters) {
             if (!subconverter.canUnwrap(obj.getClass())) continue; // this sub-class doesn't implement the type
 
             return subconverter.unwrap(obj);
@@ -118,7 +118,7 @@ public class RPCConverter<T extends RPCObject> {
 
         if (this.canLocallyWrap(objectType)) return true;
 
-        for (RPCConverter subconverter : this.subconverters) {
+        for (RPCConverter<?> subconverter : this.subconverters) {
             if (subconverter.canWrap(objectType)) return true;
         }
 
@@ -129,7 +129,7 @@ public class RPCConverter<T extends RPCObject> {
     private boolean canUnwrap(Class<? extends RPCObject> rpcType) {
         if (this.canLocallyUnwrap(rpcType)) return true;
 
-        for (RPCConverter subconverter : this.subconverters) {
+        for (RPCConverter<?> subconverter : this.subconverters) {
             if (subconverter.canUnwrap(rpcType)) return true;
         }
 
@@ -137,7 +137,7 @@ public class RPCConverter<T extends RPCObject> {
         return false;
     }
 
-    public RPCConverter addSubconverter(RPCConverter subconverter) {
+    public RPCConverter<T> addSubconverter(RPCConverter<?> subconverter) {
         this.subconverters.add(subconverter);
         return this;
     }
