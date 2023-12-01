@@ -6,11 +6,11 @@ import dev.watchwolf.core.rpc.objects.types.RPCObject;
 import java.util.ArrayList;
 import java.util.List;
 
-public class RPCConverter {
-    private final Class<? extends RPCObject> locallyConverting;
+public class RPCConverter<T extends RPCObject> {
+    private final Class<T> locallyConverting;
     private final List<RPCConverter> subconverters;
 
-    protected RPCConverter(Class<? extends RPCObject> converting) {
+    protected RPCConverter(Class<T> converting) {
         this.subconverters = new ArrayList<>();
         this.locallyConverting = converting;
     }
@@ -36,9 +36,10 @@ public class RPCConverter {
         throw new UnsupportedOperationException("No converter was found with the argument obj_type=" + obj.getClass().getName() + " in the class, nor the sub-classes.");
     }
 
+    @SuppressWarnings("NullAway")
     public Object unwrap(RPCObject obj) {
         if (this.canLocallyUnwrap(obj.getClass())) {
-            return this.performUnwrap(obj);
+            return this.performUnwrap(this.locallyConverting.cast(obj));
         }
 
         for (RPCConverter subconverter : this.subconverters) {
@@ -53,20 +54,20 @@ public class RPCConverter {
 
     protected RPCObject _unmarshall(MessageChannel channel, Class<? extends RPCObject> type) {
         if (this.canLocallyUnwrap(type)) {
-            return this.performUnmarshall(channel, type);
+            return this.performUnmarshall(channel, (Class<? extends T>)type);
         }
 
-        for (RPCConverter subconverter : this.subconverters) {
+        for (RPCConverter<?> subconverter : this.subconverters) {
             if (!subconverter.canUnwrap(type)) continue; // this sub-class doesn't implement the type
 
-            return subconverter.unmarshall(channel, type);
+            return subconverter._unmarshall(channel, type);
         }
 
         // raw class; it doesn't implement anything
         throw new UnsupportedOperationException("No converter was found with the argument obj_type=" + type.getName() + " in the class, nor the sub-classes.");
     }
 
-    public <T> T unmarshall(MessageChannel channel, Class<T> type) {
+    public <O> O unmarshall(MessageChannel channel, Class<O> type) {
         Class<? extends RPCObject> rpcType = this.getRPCWrapClass(type);
         RPCObject unmarshalledRpcObject = this._unmarshall(channel, rpcType);
         Object unmarshalledObject = this.unwrap(unmarshalledRpcObject);
@@ -81,7 +82,7 @@ public class RPCConverter {
             return this.locallyConverting;
         }
 
-        for (RPCConverter subconverter : this.subconverters) {
+        for (RPCConverter<?> subconverter : this.subconverters) {
             if (!subconverter.canWrap(type)) continue; // this sub-class doesn't implement the type
 
             return subconverter.getRPCWrapClass(type);
@@ -100,15 +101,15 @@ public class RPCConverter {
         return rpcType.isAssignableFrom(this.locallyConverting);
     }
 
-    protected RPCObject performWrap(Object obj) {
+    protected T performWrap(Object obj) {
         throw new UnsupportedOperationException("Undefined operation.");
     }
 
-    protected Object performUnwrap(RPCObject obj) {
+    protected Object performUnwrap(T obj) {
         throw new UnsupportedOperationException("Undefined operation.");
     }
 
-    protected RPCObject performUnmarshall(MessageChannel channel, Class<? extends RPCObject> type) {
+    protected T performUnmarshall(MessageChannel channel, Class<? extends T> type) {
         throw new UnsupportedOperationException("Undefined operation.");
     }
 

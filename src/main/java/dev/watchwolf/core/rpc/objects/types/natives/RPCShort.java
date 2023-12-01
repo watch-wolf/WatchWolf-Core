@@ -18,24 +18,24 @@ public class RPCShort extends NativeTypeRPCObject<Integer> {
     }
 
     @MainSubconverter
-    public static class RPCShortConverter extends RPCConverter {
+    public static class RPCShortConverter extends RPCConverter<RPCShort> {
         public RPCShortConverter() {
             super(RPCShort.class);
         }
 
         @Override
-        protected RPCObject performWrap(Object obj) {
+        protected RPCShort performWrap(Object obj) {
             int value = ((Number)obj).intValue();
             return new RPCShort(value);
         }
 
         @Override
-        protected Object performUnwrap(RPCObject obj) {
-            return ((RPCShort)obj).object;
+        protected Object performUnwrap(RPCShort obj) {
+            return obj.object;
         }
 
         @Override
-        protected RPCObject performUnmarshall(MessageChannel channel, Class<? extends RPCObject> type) {
+        protected RPCShort performUnmarshall(MessageChannel channel, Class<? extends RPCShort> type) {
             int lsb = channel.get(1)[0],
                 msb = channel.get(1)[0];
             return new RPCShort(msb << 8 | lsb);
