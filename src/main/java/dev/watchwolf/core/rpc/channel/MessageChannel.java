@@ -1,7 +1,7 @@
 package dev.watchwolf.core.rpc.channel;
 
 public interface MessageChannel {
-    void send(byte []data);
+    void send(byte ...data);
 
     byte []get(int numBytes, int timeout);
 

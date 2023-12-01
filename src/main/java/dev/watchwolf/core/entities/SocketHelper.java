@@ -61,23 +61,12 @@ public class SocketHelper {
         return dis.readUnsignedByte() != 0x00;
     }
 
-    public static void addShort(ArrayList<Byte> out, int s) {
-        out.add((byte)(s & 0xFF));
-        out.add((byte)((s >> 8)&0xFF));
-    }
-
     public static void fill(ArrayList<Byte> out, int bytes) {
         for (int n = 0; n < bytes; n++) out.add((byte)0);
     }
 
     public static void discard(DataInputStream dis, int bytes) throws IOException {
         for (int n = 0; n < bytes; n++) dis.readUnsignedByte();
-    }
-
-    public static int readShort(DataInputStream dis) throws IOException {
-        int lsb = dis.readUnsignedByte();
-        short msb = (short)dis.readUnsignedByte();
-        return (msb << 8 | lsb);
     }
 
     public static double readDouble(DataInputStream dis) throws IOException {
