@@ -37,15 +37,15 @@ public class RPCConverter<T extends RPCObject> {
     }
 
     @SuppressWarnings("NullAway")
-    public Object unwrap(RPCObject obj) {
+    public <O> O unwrap(RPCObject obj, Class<O> type) {
         if (this.canLocallyUnwrap(obj.getClass())) {
-            return this.performUnwrap(this.locallyConverting.cast(obj));
+            return this.performUnwrap(this.locallyConverting.cast(obj), type);
         }
 
         for (RPCConverter<?> subconverter : this.subconverters) {
             if (!subconverter.canUnwrap(obj.getClass())) continue; // this sub-class doesn't implement the type
 
-            return subconverter.unwrap(obj);
+            return subconverter.unwrap(obj, type);
         }
 
         // raw class; it doesn't implement anything
@@ -70,8 +70,7 @@ public class RPCConverter<T extends RPCObject> {
     public <O> O unmarshall(MessageChannel channel, Class<O> type) {
         Class<? extends RPCObject> rpcType = this.getRPCWrapClass(type);
         RPCObject unmarshalledRpcObject = this._unmarshall(channel, rpcType);
-        Object unmarshalledObject = this.unwrap(unmarshalledRpcObject);
-        return type.cast(unmarshalledObject);
+        return this.unwrap(unmarshalledRpcObject, type);
     }
 
     public Class<? extends RPCObject> getRPCWrapClass(Class<?> type) {
@@ -105,7 +104,7 @@ public class RPCConverter<T extends RPCObject> {
         throw new UnsupportedOperationException("Undefined operation.");
     }
 
-    protected Object performUnwrap(T obj) {
+    protected <O> O performUnwrap(T obj, Class<O> type) {
         throw new UnsupportedOperationException("Undefined operation.");
     }
 

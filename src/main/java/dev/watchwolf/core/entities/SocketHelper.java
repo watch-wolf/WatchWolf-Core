@@ -37,20 +37,6 @@ public class SocketHelper {
         SocketHelper.addArray(out, arr, SocketHelper::addRaw);
     }
 
-    /**
-     * Adds a double to send via sockets.
-     * @author https://stackoverflow.com/a/13072387/9178470
-     * @param out Where to add
-     * @param d Double
-     */
-    public static void addDouble(ArrayList<Byte> out, double d) {
-        long lng = Double.doubleToLongBits(d);
-        for(int i = 0; i < 8; i++) out.add((byte)((lng >> ((7 - i) * 8)) & 0xff));
-    }
-
-    public static void addFloat(ArrayList<Byte> out, float d) {
-        SocketHelper.addDouble(out, (double) d);
-    }
 
     public static void addBool(ArrayList<Byte> out, boolean b) {
         if (b) out.add((byte) 0xFF);
@@ -67,16 +53,6 @@ public class SocketHelper {
 
     public static void discard(DataInputStream dis, int bytes) throws IOException {
         for (int n = 0; n < bytes; n++) dis.readUnsignedByte();
-    }
-
-    public static double readDouble(DataInputStream dis) throws IOException {
-        long lng = 0;
-        for (int i = 0; i < 8; i++) lng = (lng << 8) | dis.readUnsignedByte();
-        return Double.longBitsToDouble(lng);
-    }
-
-    public static float readFloat(DataInputStream dis) throws IOException {
-        return (float) SocketHelper.readDouble(dis);
     }
 
     public static String readString(DataInputStream dis) throws IOException {
