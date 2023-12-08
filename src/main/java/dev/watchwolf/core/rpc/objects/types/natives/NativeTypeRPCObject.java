@@ -1,8 +1,8 @@
 package dev.watchwolf.core.rpc.objects.types.natives;
 
-import dev.watchwolf.core.rpc.objects.types.RpcObjectWrapper;
+import dev.watchwolf.core.rpc.objects.types.RPCObjectWrapper;
 
-public abstract class NativeTypeRPCObject<T> extends RpcObjectWrapper<T> {
+public abstract class NativeTypeRPCObject<T> extends RPCObjectWrapper<T> {
     public NativeTypeRPCObject(T object) {
         super(object);
     }

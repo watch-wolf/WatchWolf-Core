@@ -1,19 +1,6 @@
 package dev.watchwolf.core.entities;
 
-import java.util.ArrayList;
-
-public class Position extends SocketData {
-    static {
-        setReaderFunction(Position.class, (dis) -> {
-            String world = SocketHelper.readString(dis);
-            double x = SocketHelper.readDouble(dis);
-            double y = SocketHelper.readDouble(dis);
-            double z = SocketHelper.readDouble(dis);
-
-            return new Position(world, x, y, z);
-        });
-    }
-
+public class Position {
     final private String world;
     final private double x, y, z;
 
@@ -63,14 +50,6 @@ public class Position extends SocketData {
 
     public Position add(double x, double y, double z) {
         return new Position(this.world, this.x + x, this.y + y, this.z + z);
-    }
-
-    @Override
-    public void sendSocketData(ArrayList<Byte> out) {
-        SocketHelper.addString(out, this.world);
-        SocketHelper.addDouble(out, this.x);
-        SocketHelper.addDouble(out, this.y);
-        SocketHelper.addDouble(out, this.z);
     }
 
     @Override

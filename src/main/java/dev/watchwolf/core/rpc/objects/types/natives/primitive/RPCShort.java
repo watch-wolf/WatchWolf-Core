@@ -1,8 +1,10 @@
-package dev.watchwolf.core.rpc.objects.types.natives;
+package dev.watchwolf.core.rpc.objects.types.natives.primitive;
 
 import dev.watchwolf.core.rpc.channel.MessageChannel;
 import dev.watchwolf.core.rpc.objects.converter.MainSubconverter;
 import dev.watchwolf.core.rpc.objects.converter.RPCConverter;
+import dev.watchwolf.core.rpc.objects.converter.class_type.ClassType;
+import dev.watchwolf.core.rpc.objects.types.natives.NativeTypeRPCObject;
 
 public class RPCShort extends NativeTypeRPCObject<Short> {
     public RPCShort(Short object) {
@@ -33,7 +35,7 @@ public class RPCShort extends NativeTypeRPCObject<Short> {
         }
 
         @Override
-        protected <O> O performUnwrap(RPCShort obj, Class<O> type) {
+        protected <O> O performUnwrap(RPCShort obj, ClassType<O> type) {
             if (type.equals(Short.class)) return type.cast(obj.object);
             else if (type.equals(Integer.class)) return type.cast(obj.object.intValue());
 
@@ -41,14 +43,14 @@ public class RPCShort extends NativeTypeRPCObject<Short> {
         }
 
         @Override
-        protected RPCShort performUnmarshall(MessageChannel channel, Class<? extends RPCShort> type) {
+        protected RPCShort performUnmarshall(MessageChannel channel, ClassType<? extends RPCShort> type) {
             int lsb = channel.get(),
                 msb = channel.get();
             return new RPCShort((short)(msb << 8 | lsb));
         }
 
         @Override
-        protected boolean canLocallyWrap(Class<?> objectType) {
+        protected boolean canLocallyWrap(ClassType<?> objectType) {
             return (objectType.equals(Integer.class) || objectType.equals(Short.class));
         }
     }

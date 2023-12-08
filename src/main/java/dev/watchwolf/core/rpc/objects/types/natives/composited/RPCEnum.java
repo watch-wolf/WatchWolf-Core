@@ -1,11 +1,13 @@
-package dev.watchwolf.core.rpc.objects.types;
+package dev.watchwolf.core.rpc.objects.types.natives.composited;
 
 import dev.watchwolf.core.rpc.channel.MessageChannel;
 import dev.watchwolf.core.rpc.objects.converter.MainSubconverter;
 import dev.watchwolf.core.rpc.objects.converter.RPCConverter;
-import dev.watchwolf.core.rpc.objects.types.natives.RPCShort;
+import dev.watchwolf.core.rpc.objects.converter.class_type.ClassType;
+import dev.watchwolf.core.rpc.objects.types.RPCObjectWrapper;
+import dev.watchwolf.core.rpc.objects.types.natives.primitive.RPCShort;
 
-public class RPCEnum extends RpcObjectWrapper<Enum<?>> {
+public class RPCEnum extends RPCObjectWrapper<Enum<?>> {
     private final RPCShort sendObject;
 
     public RPCEnum(Enum<?> object) {
@@ -29,15 +31,15 @@ public class RPCEnum extends RpcObjectWrapper<Enum<?>> {
         return r;
     }
 
-    public <O extends Enum<O>> O getObject(Class<O> type) {
+    public Enum<?> getObject(ClassType<? extends Enum<?>> type) {
         Enum<?> r = super.getObject();
         if (r == null) {
             // no saved instance; cast integer
-            return type.getEnumConstants()[this.sendObject.getObject()];
+            return type.getClassType().getEnumConstants()[this.sendObject.getObject()];
         }
         else {
-            if (!r.getClass().equals(type)) throw new IllegalArgumentException("Trying to convert saved instance of type " + r.getClass().getName() + " into " + type.getName());
-            return (O)r;
+            if (!type.equals(r.getClass())) throw new IllegalArgumentException("Trying to convert saved instance of type " + r.getClass().getName() + " into " + type.getName());
+            return r;
         }
     }
 
@@ -48,13 +50,8 @@ public class RPCEnum extends RpcObjectWrapper<Enum<?>> {
 
     @MainSubconverter
     public static class RPCEnumConverter extends RPCConverter<RPCEnum> {
-        private final RPCConverter<?> converterObject;
-
         public RPCEnumConverter() {
             super(RPCEnum.class);
-
-            // we send the data as integer
-            this.converterObject = new RPCShort.RPCShortConverter();
         }
 
         @Override
@@ -63,20 +60,22 @@ public class RPCEnum extends RpcObjectWrapper<Enum<?>> {
         }
 
         @Override
-        protected <O> O performUnwrap(RPCEnum obj, Class<O> type) {
+        protected <O> O performUnwrap(RPCEnum obj, ClassType<O> type) {
             if (!type.isAssignableFrom(Enum.class)) throw new UnsupportedOperationException(this.getClass().getName() + " can't unwrap " + type.getName());
 
-            return (O)obj.getObject((Class<? extends Enum>)type);
+            return (O)obj.getObject((ClassType<? extends Enum<?>>)type);
         }
 
         @Override
-        protected RPCEnum performUnmarshall(MessageChannel channel, Class<? extends RPCEnum> type) {
-            short got = this.converterObject.unmarshall(channel, Short.class);
+        protected RPCEnum performUnmarshall(MessageChannel channel, ClassType<? extends RPCEnum> type) {
+            // we send the data as integer
+            short got = this.getMasterConverter().unmarshall(channel, Short.class);
+
             return new RPCEnum(got);
         }
 
         @Override
-        protected boolean canLocallyWrap(Class<?> objectType) {
+        protected boolean canLocallyWrap(ClassType<?> objectType) {
             return (objectType.isAssignableFrom(Enum.class));
         }
     }

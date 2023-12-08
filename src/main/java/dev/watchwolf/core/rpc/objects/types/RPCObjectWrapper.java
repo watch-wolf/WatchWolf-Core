@@ -1,9 +1,9 @@
 package dev.watchwolf.core.rpc.objects.types;
 
-public abstract class RpcObjectWrapper<T> implements RPCObject {
+public abstract class RPCObjectWrapper<T> implements RPCObject {
     protected final T object;
 
-    public RpcObjectWrapper(T object) {
+    public RPCObjectWrapper(T object) {
         this.object = object;
     }
 
