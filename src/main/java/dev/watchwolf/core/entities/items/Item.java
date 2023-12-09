@@ -1,20 +1,6 @@
 package dev.watchwolf.core.entities.items;
 
-import dev.watchwolf.core.entities.SocketData;
-import dev.watchwolf.core.entities.SocketHelper;
-
-import java.util.ArrayList;
-
-public class Item extends SocketData {
-    static {
-        SocketData.setReaderFunction(Item.class, (dis) -> {
-            int enumVal = SocketHelper.readShort(dis),
-                amount = dis.readUnsignedByte();
-
-            return new Item(ItemType.values()[enumVal], (byte) amount);
-        });
-    }
-
+public class Item {
     private final ItemType type;
     private byte amount;
     // TODO other attributes
@@ -51,12 +37,6 @@ public class Item extends SocketData {
 
     public byte getAmount() {
         return this.amount;
-    }
-
-    @Override
-    public void sendSocketData(ArrayList<Byte> out) {
-        SocketHelper.addShort(out, this.type.ordinal());
-        out.add(this.amount);
     }
 
     @Override
