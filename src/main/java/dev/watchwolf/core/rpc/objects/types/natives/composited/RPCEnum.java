@@ -32,6 +32,10 @@ public class RPCEnum extends RPCObjectWrapper<Enum<?>> {
         return r;
     }
 
+    public Class<? extends Enum<?>> getType() {
+        return (super.getObject() == null ? null : (Class<? extends Enum<?>>)super.getObject().getClass());
+    }
+
     public Enum<?> getObject(Class<? extends Enum<?>> type) {
         Enum<?> r = super.getObject();
         if (r == null) {
@@ -39,7 +43,7 @@ public class RPCEnum extends RPCObjectWrapper<Enum<?>> {
             return RPCEnum.getObject(this.sendObject.getObject(), type);
         }
         else {
-            if (!type.equals(r.getClass())) throw new IllegalArgumentException("Trying to convert saved instance of type " + r.getClass().getName() + " into " + type.getName());
+            if (!type.equals(this.getType())) throw new IllegalArgumentException("Trying to convert saved instance of type " + this.getType().getName() + " into " + type.getName());
             return r;
         }
     }

@@ -1,7 +1,6 @@
 package dev.watchwolf.core.rpc.objects.types.custom.items;
 
 import dev.watchwolf.core.entities.Position;
-import dev.watchwolf.core.entities.SocketHelper;
 import dev.watchwolf.core.entities.items.Item;
 import dev.watchwolf.core.entities.items.ItemType;
 import dev.watchwolf.core.rpc.channel.MessageChannel;
@@ -10,10 +9,8 @@ import dev.watchwolf.core.rpc.objects.converter.RPCConverter;
 import dev.watchwolf.core.rpc.objects.converter.class_type.ClassType;
 import dev.watchwolf.core.rpc.objects.converter.class_type.TemplateClassType;
 import dev.watchwolf.core.rpc.objects.types.RPCObjectWrapper;
-import dev.watchwolf.core.rpc.objects.types.custom.RPCPosition;
 import dev.watchwolf.core.rpc.objects.types.natives.composited.RPCEnum;
 import dev.watchwolf.core.rpc.objects.types.natives.primitive.RPCByte;
-import dev.watchwolf.core.rpc.objects.types.natives.primitive.RPCShort;
 
 public class RPCItem extends RPCObjectWrapper<Item> {
     public RPCItem(Item object) {

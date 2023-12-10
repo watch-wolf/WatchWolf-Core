@@ -1,5 +1,7 @@
 package dev.watchwolf.core.rpc.objects.converter;
 
+import dev.watchwolf.core.rpc.channel.ChannelEmu;
+import dev.watchwolf.core.rpc.channel.ChannelQueue;
 import dev.watchwolf.core.rpc.channel.MessageChannel;
 import dev.watchwolf.core.rpc.objects.converter.class_type.ClassType;
 import dev.watchwolf.core.rpc.objects.converter.class_type.ClassTypeFactory;
@@ -32,13 +34,17 @@ public class RPCConverter<T extends RPCObject> {
 
         ClassType<?> objType = ClassTypeFactory.getType(obj);
         if (this.canLocallyWrap(objType)) {
-            return this.performWrap(obj);
+            try {
+                return this.performWrap(obj);
+            } catch (UnsupportedOperationException ignore) {} // false positive
         }
 
         for (RPCConverter<?> subconverter : this.subconverters) {
             if (!subconverter.canWrap(objType)) continue; // this sub-class doesn't implement the type
 
-            return subconverter.wrap(obj);
+            try {
+                return subconverter.wrap(obj);
+            } catch (UnsupportedOperationException ignore) {} // false positive
         }
 
         // raw class; it doesn't implement anything
@@ -49,28 +55,40 @@ public class RPCConverter<T extends RPCObject> {
     public <O> O unwrap(RPCObject obj, ClassType<O> type) {
         ClassType<? extends RPCObject> objType = ClassTypeFactory.getType(obj);
         if (this.canLocallyUnwrap(objType)) {
-            return this.performUnwrap(this.locallyConverting.cast(obj), type);
+            try {
+                return this.performUnwrap(this.locallyConverting.cast(obj), type);
+            } catch (UnsupportedOperationException ignore) {} // false positive
         }
 
         for (RPCConverter<?> subconverter : this.subconverters) {
             if (!subconverter.canUnwrap(objType)) continue; // this sub-class doesn't implement the type
 
-            return subconverter.unwrap(obj, type);
+            try {
+                return subconverter.unwrap(obj, type);
+            } catch (UnsupportedOperationException ignore) {} // false positive
         }
 
         // raw class; it doesn't implement anything
         throw new UnsupportedOperationException("No converter was found with the argument obj_type=" + obj.getClass().getName() + " in the class, nor the sub-classes.");
     }
 
-    protected RPCObject _unmarshall(MessageChannel channel, ClassType<? extends RPCObject> rpcType) {
+    protected RPCObject _unmarshall(ChannelQueue channel, ClassType<? extends RPCObject> rpcType) {
         if (this.canLocallyUnwrap(rpcType)) {
-            return this.performUnmarshall(channel, (ClassType<? extends T>)rpcType);
+            ChannelEmu emulatedChannel = new ChannelEmu(channel);
+            try {
+                return this.performUnmarshall(emulatedChannel, (ClassType<? extends T>) rpcType);
+            } catch (UnsupportedOperationException ignore) {
+                // false positive; discard changes
+                emulatedChannel.discard();
+            }
         }
 
         for (RPCConverter<?> subconverter : this.subconverters) {
             if (!subconverter.canUnwrap(rpcType)) continue; // this sub-class doesn't implement the type
 
-            return subconverter._unmarshall(channel, rpcType);
+            try {
+                return subconverter._unmarshall(channel, rpcType);
+            } catch (UnsupportedOperationException ignore) {} // false positive
         }
 
         // raw class; it doesn't implement anything
@@ -79,7 +97,8 @@ public class RPCConverter<T extends RPCObject> {
 
     public <O> O unmarshall(MessageChannel channel, ClassType<O> type) {
         ClassType<? extends RPCObject> rpcType = this.getRPCWrapClass(type);
-        RPCObject unmarshalledRpcObject = this._unmarshall(channel, rpcType);
+        ChannelQueue queuedChannel = new ChannelQueue(channel);
+        RPCObject unmarshalledRpcObject = this._unmarshall(queuedChannel, rpcType);
         return this.unwrap(unmarshalledRpcObject, type);
     }
 

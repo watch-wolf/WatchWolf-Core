@@ -1,8 +1,6 @@
 package dev.watchwolf.core.entities.entities;
 
 import dev.watchwolf.core.entities.Position;
-import dev.watchwolf.core.entities.SocketData;
-import dev.watchwolf.core.entities.SocketHelper;
 import dev.watchwolf.core.entities.items.Item;
 
 /* THIS CLASS WAS AUTOMATICALLY GENERATED; DO NOT MODIFY */

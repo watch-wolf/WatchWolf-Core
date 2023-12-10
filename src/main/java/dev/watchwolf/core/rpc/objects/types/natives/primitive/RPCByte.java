@@ -20,6 +20,10 @@ public class RPCByte extends NativeTypeRPCObject<Byte> {
         channel.send(this.object);
     }
 
+    public int getUnsignedObject() {
+        return Byte.toUnsignedInt(this.getObject());
+    }
+
     @MainSubconverter
     public static class RPCByteConverter extends RPCConverter<RPCByte> {
         public RPCByteConverter() {

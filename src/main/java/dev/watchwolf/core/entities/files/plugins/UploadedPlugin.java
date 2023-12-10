@@ -1,4 +1,4 @@
-package dev.watchwolf.core.entities.files;
+package dev.watchwolf.core.entities.files.plugins;
 
 import dev.watchwolf.core.entities.SocketHelper;
 
