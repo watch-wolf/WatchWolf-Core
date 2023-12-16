@@ -142,6 +142,20 @@ public enum EntityType {
         return sb.toString().toUpperCase();
     }
 
+	public String toClassName() {
+		StringBuilder sb = new StringBuilder(this.name().toLowerCase()); // enum name as lower
+		sb.setCharAt(0, Character.toUpperCase(sb.charAt(0))); // first must be upper
+		// if '_' present, remove it and change the next as upper
+		for (int i = 1; i < sb.length() - 1; i++) {
+			if (sb.charAt(i) == '_') {
+				sb.setCharAt(i+1, Character.toUpperCase(sb.charAt(i+1)));
+				sb.deleteCharAt(i);
+				// we're removing the lenght by 1, but we'll increase it too, so we'll skip this "upper character"
+			}
+		}
+		return sb.toString();
+	}
+
     /**
      * Get the EntityType using an instance
      * @param e Entity instance

@@ -1,6 +1,5 @@
 package dev.watchwolf.core.rpc.objects.types.custom.blocks;
 
-import dev.watchwolf.core.entities.Position;
 import dev.watchwolf.core.entities.blocks.Block;
 import dev.watchwolf.core.entities.blocks.Blocks;
 import dev.watchwolf.core.entities.blocks.transformer.Transformers;
@@ -45,7 +44,7 @@ public class RPCBlock extends RPCObjectWrapper<Block> {
 
         @Override
         protected <O> O performUnwrap(RPCBlock obj, ClassType<O> type) {
-            if (type.equals(Position.class)) return type.cast(obj.object);
+            if (type.equals(Block.class)) return type.cast(obj.object);
 
             throw new UnsupportedOperationException(this.getClass().getName() + " can't unwrap " + type.getName());
         }
