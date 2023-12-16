@@ -37,6 +37,10 @@ public class RPCArray extends NativeTypeRPCObject<Collection<? extends RPCObject
         return super.object.iterator();
     }
 
+    public int size() {
+        return super.object.size();
+    }
+
     @MainSubconverter
     public static class RPCStringConverter extends RPCConverter<RPCArray> {
         public RPCStringConverter() {

@@ -1,12 +1,11 @@
 package dev.watchwolf.core.entities;
 
 import dev.watchwolf.core.entities.items.Item;
-import dev.watchwolf.core.entities.items.ItemType;
 
 import java.util.ArrayList;
 import java.util.List;
 
-public class Container extends SocketData {
+public class Container {
     private final Item []items;
 
     public Container(Item []items) {
@@ -32,31 +31,5 @@ public class Container extends SocketData {
             r[n] = new Item(from[n]);
         }
         return r;
-    }
-
-    static {
-        setReaderFunction(Container.class, (dis) -> {
-            Item air = new Item(ItemType.AIR);
-            int size = SocketHelper.readShort(dis);
-            Item []get = new Item[size];
-            for (int n = 0; n < get.length; n++) {
-                get[n] = (Item) readSocketData(dis, Item.class);
-                if (get[n].equals(air)) get[n] = null;
-            }
-
-            return new Container(get);
-        });
-    }
-
-    @Override
-    public void sendSocketData(ArrayList<Byte> out) {
-        SocketHelper.addArray(out, this.items, (o,obj) -> {
-            Item air = new Item(ItemType.AIR);
-            for (int n = 0; n < obj.length; n++) {
-                Item send = obj[n];
-                if (send == null) send = air;
-                send.sendSocketData(o);
-            }
-        });
     }
 }
