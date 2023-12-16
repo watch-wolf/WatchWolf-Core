@@ -38,7 +38,7 @@ public class RPCFilePlugin extends RPCPlugin {
 
         @Override
         protected <O> O performUnwrap(RPCPlugin obj, ClassType<O> type) throws UnsupportedOperationException {
-            if (type.equals(FilePlugin.class)) return type.cast(((RPCFilePlugin) obj).object);
+            if (type.isAssignableFrom(FilePlugin.class)) return type.cast(((RPCFilePlugin) obj).object);
 
             throw new UnsupportedOperationException(this.getClass().getName() + " can't unwrap " + type.getName());
         }

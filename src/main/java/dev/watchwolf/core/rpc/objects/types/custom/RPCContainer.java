@@ -71,7 +71,7 @@ public class RPCContainer extends RPCObjectWrapper<Container> {
 
         @Override
         protected boolean canLocallyWrap(ClassType<?> objectType) {
-            return (objectType.equals(Container.class));
+            return (objectType.equals(ClassTypeFactory.getType(Container.class)));
         }
     }
 }

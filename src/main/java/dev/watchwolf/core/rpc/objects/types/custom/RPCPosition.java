@@ -5,6 +5,7 @@ import dev.watchwolf.core.rpc.channel.MessageChannel;
 import dev.watchwolf.core.rpc.objects.converter.MainSubconverter;
 import dev.watchwolf.core.rpc.objects.converter.RPCConverter;
 import dev.watchwolf.core.rpc.objects.converter.class_type.ClassType;
+import dev.watchwolf.core.rpc.objects.converter.class_type.ClassTypeFactory;
 import dev.watchwolf.core.rpc.objects.types.RPCObjectWrapper;
 import dev.watchwolf.core.rpc.objects.types.natives.composited.RPCString;
 import dev.watchwolf.core.rpc.objects.types.natives.primitive.RPCDouble;
@@ -35,9 +36,7 @@ public class RPCPosition extends RPCObjectWrapper<Position> {
 
         @Override
         protected <O> O performUnwrap(RPCPosition obj, ClassType<O> type) {
-            if (type.equals(Position.class)) return type.cast(obj.object);
-
-            throw new UnsupportedOperationException(this.getClass().getName() + " can't unwrap " + type.getName());
+            return type.cast(obj.object);
         }
 
         @Override
@@ -53,7 +52,7 @@ public class RPCPosition extends RPCObjectWrapper<Position> {
 
         @Override
         protected boolean canLocallyWrap(ClassType<?> objectType) {
-            return (objectType.equals(Position.class));
+            return (objectType.equals(ClassTypeFactory.getType(Position.class)));
         }
     }
 }

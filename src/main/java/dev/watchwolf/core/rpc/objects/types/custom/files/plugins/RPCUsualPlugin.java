@@ -39,7 +39,7 @@ public class RPCUsualPlugin extends RPCPlugin {
 
         @Override
         protected <O> O performUnwrap(RPCPlugin obj, ClassType<O> type) throws UnsupportedOperationException {
-            if (type.equals(UsualPlugin.class)) return type.cast(((RPCUsualPlugin) obj).object);
+            if (type.isAssignableFrom(UsualPlugin.class)) return type.cast(((RPCUsualPlugin) obj).object);
 
             throw new UnsupportedOperationException(this.getClass().getName() + " can't unwrap " + type.getName());
         }

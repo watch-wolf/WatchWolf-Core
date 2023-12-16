@@ -4,6 +4,7 @@ import dev.watchwolf.core.rpc.channel.MessageChannel;
 import dev.watchwolf.core.rpc.objects.converter.MainSubconverter;
 import dev.watchwolf.core.rpc.objects.converter.RPCConverter;
 import dev.watchwolf.core.rpc.objects.converter.class_type.ClassType;
+import dev.watchwolf.core.rpc.objects.converter.class_type.ClassTypeFactory;
 import dev.watchwolf.core.rpc.objects.types.natives.NativeTypeRPCObject;
 
 public class RPCDouble extends NativeTypeRPCObject<Double> {
@@ -35,8 +36,8 @@ public class RPCDouble extends NativeTypeRPCObject<Double> {
 
         @Override
         protected <O> O performUnwrap(RPCDouble obj, ClassType<O> type) {
-            if (type.equals(Double.class)) return type.cast(obj.object);
-            else if (type.equals(Float.class)) return type.cast(obj.object.floatValue());
+            if (type.equals(ClassTypeFactory.getType(Double.class))) return type.cast(obj.object);
+            else if (type.equals(ClassTypeFactory.getType(Float.class))) return type.cast(obj.object.floatValue());
 
             throw new UnsupportedOperationException(this.getClass().getName() + " can't unwrap " + type.getName());
         }
@@ -50,7 +51,7 @@ public class RPCDouble extends NativeTypeRPCObject<Double> {
 
         @Override
         protected boolean canLocallyWrap(ClassType<?> objectType) {
-            return (objectType.equals(Double.class) || objectType.equals(Float.class));
+            return (objectType.equals(ClassTypeFactory.getType(Double.class)) || objectType.equals(ClassTypeFactory.getType(Float.class)));
         }
     }
 }

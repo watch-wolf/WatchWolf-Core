@@ -4,6 +4,7 @@ import dev.watchwolf.core.rpc.channel.MessageChannel;
 import dev.watchwolf.core.rpc.objects.converter.MainSubconverter;
 import dev.watchwolf.core.rpc.objects.converter.RPCConverter;
 import dev.watchwolf.core.rpc.objects.converter.class_type.ClassType;
+import dev.watchwolf.core.rpc.objects.converter.class_type.ClassTypeFactory;
 import dev.watchwolf.core.rpc.objects.types.natives.NativeTypeRPCObject;
 
 public class RPCShort extends NativeTypeRPCObject<Short> {
@@ -36,8 +37,8 @@ public class RPCShort extends NativeTypeRPCObject<Short> {
 
         @Override
         protected <O> O performUnwrap(RPCShort obj, ClassType<O> type) {
-            if (type.equals(Short.class)) return type.cast(obj.object);
-            else if (type.equals(Integer.class)) return type.cast(obj.object.intValue());
+            if (type.equals(ClassTypeFactory.getType(Short.class))) return type.cast(obj.object);
+            else if (type.equals(ClassTypeFactory.getType(Integer.class))) return type.cast(obj.object.intValue());
 
             throw new UnsupportedOperationException(this.getClass().getName() + " can't unwrap " + type.getName());
         }
@@ -51,7 +52,7 @@ public class RPCShort extends NativeTypeRPCObject<Short> {
 
         @Override
         protected boolean canLocallyWrap(ClassType<?> objectType) {
-            return (objectType.equals(Integer.class) || objectType.equals(Short.class));
+            return (objectType.equals(ClassTypeFactory.getType(Integer.class)) || objectType.equals(ClassTypeFactory.getType(Short.class)));
         }
     }
 }

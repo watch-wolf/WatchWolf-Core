@@ -72,6 +72,10 @@ public class RPCConverter<T extends RPCObject> {
         throw new UnsupportedOperationException("No converter was found with the argument obj_type=" + obj.getClass().getName() + " in the class, nor the sub-classes.");
     }
 
+    public <O> O unwrap(RPCObject obj, Class<O> type) {
+        return this.unwrap(obj, ClassTypeFactory.getType(type));
+    }
+
     protected RPCObject _unmarshall(ChannelQueue channel, ClassType<? extends RPCObject> rpcType) {
         if (this.canLocallyUnwrap(rpcType)) {
             ChannelEmu emulatedChannel = new ChannelEmu(channel);
@@ -183,6 +187,8 @@ public class RPCConverter<T extends RPCObject> {
     }
 
     public RPCConverter<T> addSubconverter(RPCConverter<?> subconverter) {
+        if (subconverter == null) return this;
+
         this.subconverters.add(subconverter);
         subconverter.setMasterConverter(this.masterConverter); // we need to notify who's the boss
         return this;

@@ -4,6 +4,7 @@ import dev.watchwolf.core.rpc.channel.MessageChannel;
 import dev.watchwolf.core.rpc.objects.converter.MainSubconverter;
 import dev.watchwolf.core.rpc.objects.converter.RPCConverter;
 import dev.watchwolf.core.rpc.objects.converter.class_type.ClassType;
+import dev.watchwolf.core.rpc.objects.converter.class_type.ClassTypeFactory;
 import dev.watchwolf.core.rpc.objects.types.natives.NativeTypeRPCObject;
 
 public class RPCChar extends NativeTypeRPCObject<Character> {
@@ -33,9 +34,7 @@ public class RPCChar extends NativeTypeRPCObject<Character> {
 
         @Override
         protected <O> O performUnwrap(RPCChar obj, ClassType<O> type) {
-            if (type.equals(Character.class)) return type.cast(obj.object);
-
-            throw new UnsupportedOperationException(this.getClass().getName() + " can't unwrap " + type.getName());
+            return type.cast(obj.object);
         }
 
         @Override
@@ -45,7 +44,7 @@ public class RPCChar extends NativeTypeRPCObject<Character> {
 
         @Override
         protected boolean canLocallyWrap(ClassType<?> objectType) {
-            return (objectType.equals(Character.class));
+            return (objectType.equals(ClassTypeFactory.getType(Character.class)));
         }
     }
 }

@@ -47,9 +47,7 @@ public class RPCEntity extends RPCObjectWrapper<Entity> {
 
         @Override
         protected <O> O performUnwrap(RPCEntity obj, ClassType<O> type) {
-            if (type.equals(Entity.class)) return type.cast(obj.object);
-
-            throw new UnsupportedOperationException(this.getClass().getName() + " can't unwrap " + type.getName());
+            return type.cast(obj.object);
         }
 
         @Override
@@ -81,7 +79,7 @@ public class RPCEntity extends RPCObjectWrapper<Entity> {
 
         @Override
         protected boolean canLocallyWrap(ClassType<?> objectType) {
-            return (objectType.equals(Entity.class));
+            return (objectType.isAssignableFrom(Entity.class));
         }
     }
 }

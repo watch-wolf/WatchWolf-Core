@@ -44,9 +44,7 @@ public class RPCBlock extends RPCObjectWrapper<Block> {
 
         @Override
         protected <O> O performUnwrap(RPCBlock obj, ClassType<O> type) {
-            if (type.equals(Block.class)) return type.cast(obj.object);
-
-            throw new UnsupportedOperationException(this.getClass().getName() + " can't unwrap " + type.getName());
+            return type.cast(obj.object);
         }
 
         @Override
@@ -68,7 +66,7 @@ public class RPCBlock extends RPCObjectWrapper<Block> {
 
         @Override
         protected boolean canLocallyWrap(ClassType<?> objectType) {
-            return (objectType.equals(Block.class));
+            return (objectType.isAssignableFrom(Block.class));
         }
     }
 }

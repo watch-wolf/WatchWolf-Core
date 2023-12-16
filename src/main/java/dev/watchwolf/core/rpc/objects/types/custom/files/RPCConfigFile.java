@@ -5,6 +5,7 @@ import dev.watchwolf.core.rpc.channel.MessageChannel;
 import dev.watchwolf.core.rpc.objects.converter.MainSubconverter;
 import dev.watchwolf.core.rpc.objects.converter.RPCConverter;
 import dev.watchwolf.core.rpc.objects.converter.class_type.ClassType;
+import dev.watchwolf.core.rpc.objects.converter.class_type.ClassTypeFactory;
 import dev.watchwolf.core.rpc.objects.types.RPCObjectWrapper;
 import dev.watchwolf.core.rpc.objects.types.natives.composited.RPCString;
 import dev.watchwolf.core.rpc.objects.types.natives.primitive.RPCByte;
@@ -45,9 +46,7 @@ public class RPCConfigFile extends RPCObjectWrapper<ConfigFile> {
 
         @Override
         protected <O> O performUnwrap(RPCConfigFile obj, ClassType<O> type) {
-            if (type.equals(ConfigFile.class)) return type.cast(obj.object);
-
-            throw new UnsupportedOperationException(this.getClass().getName() + " can't unwrap " + type.getName());
+            return type.cast(obj.object);
         }
 
         @Override
@@ -72,7 +71,7 @@ public class RPCConfigFile extends RPCObjectWrapper<ConfigFile> {
 
         @Override
         protected boolean canLocallyWrap(ClassType<?> objectType) {
-            return (objectType.equals(ConfigFile.class));
+            return (objectType.equals(ClassTypeFactory.getType(ConfigFile.class)));
         }
     }
 }

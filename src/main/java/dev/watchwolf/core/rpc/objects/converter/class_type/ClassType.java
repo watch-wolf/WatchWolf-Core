@@ -33,11 +33,9 @@ public class ClassType<T> {
 
     @Override
     public boolean equals(Object o) {
-        ClassType<?> that;
-        if (o instanceof ClassType) that = (ClassType<?>) o;
-        else if (o instanceof Class) that = new ClassType<>(o.getClass());
-        else return false; // no class type
+        if (!(o instanceof ClassType)) return false;
 
+        ClassType<?> that = (ClassType<?>) o;
         return this.getClassType().equals(that.getClassType());
     }
 }
