@@ -4,6 +4,7 @@ import dev.watchwolf.core.entities.files.ConfigFile;
 import dev.watchwolf.core.entities.files.plugins.FilePlugin;
 import dev.watchwolf.core.rpc.channel.MessageChannel;
 import dev.watchwolf.core.rpc.objects.converter.RPCConverter;
+import dev.watchwolf.core.rpc.objects.converter.Subconverter;
 import dev.watchwolf.core.rpc.objects.converter.class_type.ClassType;
 import dev.watchwolf.core.rpc.objects.types.custom.files.RPCConfigFile;
 import dev.watchwolf.core.rpc.objects.types.natives.primitive.RPCByte;
@@ -22,6 +23,7 @@ public class RPCFilePlugin extends RPCPlugin {
         new RPCConfigFile(plugin.getFile()).send(channel);
     }
 
+    @Subconverter(RPCPluginConverter.class)
     public static class RPCFilePluginConverter extends RPCConverter<RPCPlugin> {
         public RPCFilePluginConverter() {
             super(RPCPlugin.class);

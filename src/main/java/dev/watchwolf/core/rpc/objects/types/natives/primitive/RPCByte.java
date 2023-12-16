@@ -15,6 +15,10 @@ public class RPCByte extends NativeTypeRPCObject<Byte> {
         this((Byte)object);
     }
 
+    public RPCByte() {
+        this((byte) 0); // empty
+    }
+
     @Override
     public void send(MessageChannel channel) {
         channel.send(this.object);

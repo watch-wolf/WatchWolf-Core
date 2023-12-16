@@ -1,9 +1,7 @@
 package dev.watchwolf.core.entities.entities;
 
+import dev.watchwolf.core.entities.entities.Entity;
 import dev.watchwolf.core.entities.Position;
-import dev.watchwolf.core.entities.SocketHelper;
-
-import java.util.ArrayList;
 
 /* THIS CLASS WAS AUTOMATICALLY GENERATED; DO NOT MODIFY */
 public class Snowman extends Entity {
@@ -13,12 +11,5 @@ public class Snowman extends Entity {
 
     public Snowman(Position position) {
         super(position);
-    }
-
-    @Override
-    public void sendSocketData(ArrayList<Byte> out) {
-        SocketHelper.addShort(out, EntityType.SNOWMAN.ordinal());
-        this.position.sendSocketData(out);
-        SocketHelper.addString(out, this.UUID);
     }
 }

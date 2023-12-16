@@ -1,9 +1,8 @@
 package dev.watchwolf.core.entities.entities;
 
 import dev.watchwolf.core.entities.Position;
-import dev.watchwolf.core.entities.SocketData;
 
-public abstract class Entity extends SocketData {
+public abstract class Entity {
     protected String UUID;
     protected final Position position;
 

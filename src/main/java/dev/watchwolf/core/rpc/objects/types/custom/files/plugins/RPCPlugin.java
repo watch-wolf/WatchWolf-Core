@@ -15,15 +15,6 @@ public abstract class RPCPlugin extends RPCObjectWrapper<Plugin> {
     abstract public void send(MessageChannel channel);
 
     @MainSubconverter
-    public static class RPCPluginConverter extends RPCConverter<RPCPlugin> {
-        public RPCPluginConverter() {
-            super(RPCPlugin.class);
-
-            // RPCPlugin sub-converters
-            this.addSubconverter(new RPCFilePlugin.RPCFilePluginConverter());
-            this.addSubconverter(new RPCUploadedPlugin.RPCUploadedPluginConverter());
-            this.addSubconverter(new RPCUsualPlugin.RPCUsualPluginConverter());
-        }
-    }
+    public static class RPCPluginConverter extends RPCConverter<RPCPlugin> { /* empty implementation; delegate to sub-converters */ }
 }
 

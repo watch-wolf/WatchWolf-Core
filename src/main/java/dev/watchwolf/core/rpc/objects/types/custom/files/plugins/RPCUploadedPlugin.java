@@ -3,6 +3,7 @@ package dev.watchwolf.core.rpc.objects.types.custom.files.plugins;
 import dev.watchwolf.core.entities.files.plugins.UploadedPlugin;
 import dev.watchwolf.core.rpc.channel.MessageChannel;
 import dev.watchwolf.core.rpc.objects.converter.RPCConverter;
+import dev.watchwolf.core.rpc.objects.converter.Subconverter;
 import dev.watchwolf.core.rpc.objects.converter.class_type.ClassType;
 import dev.watchwolf.core.rpc.objects.types.natives.composited.RPCString;
 import dev.watchwolf.core.rpc.objects.types.natives.primitive.RPCByte;
@@ -21,6 +22,7 @@ public class RPCUploadedPlugin extends RPCPlugin {
         new RPCString(plugin.getUrl()).send(channel);
     }
 
+    @Subconverter(RPCPluginConverter.class)
     public static class RPCUploadedPluginConverter extends RPCConverter<RPCPlugin> {
         public RPCUploadedPluginConverter() {
             super(RPCPlugin.class);

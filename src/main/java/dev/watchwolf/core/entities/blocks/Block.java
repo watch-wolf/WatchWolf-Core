@@ -1,20 +1,17 @@
 package dev.watchwolf.core.entities.blocks;
 
-import dev.watchwolf.core.entities.SocketData;
-import dev.watchwolf.core.entities.SocketHelper;
 import dev.watchwolf.core.entities.items.ItemType;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-public class Block extends SocketData {
+public class Block {
     public interface BlockFieldGetter {
         String getBlockField(Block instance, Field field);
     }
@@ -58,12 +55,6 @@ public class Block extends SocketData {
 
     public ItemType getItemType() {
         return ItemType.valueOf(this.getName().toUpperCase());
-    }
-
-    @Override
-    public void sendSocketData(ArrayList<Byte> out) {
-        SocketHelper.addShort(out, this.id);
-        SocketHelper.fill(out, 54); // fill 54 bytes of unused arguments
     }
 
     @Override
