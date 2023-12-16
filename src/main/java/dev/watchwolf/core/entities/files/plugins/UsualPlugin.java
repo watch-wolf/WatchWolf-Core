@@ -1,9 +1,5 @@
 package dev.watchwolf.core.entities.files.plugins;
 
-import dev.watchwolf.core.entities.SocketHelper;
-
-import java.util.ArrayList;
-
 public class UsualPlugin extends Plugin {
     private final String name;
     private final String version;
@@ -31,11 +27,16 @@ public class UsualPlugin extends Plugin {
         this(name, null);
     }
 
-    @Override
-    public void sendSocketData(ArrayList<Byte> out) {
-        out.add((byte) 0x00); // usual plugin
-        SocketHelper.addString(out, this.name);
-        SocketHelper.addString(out, (this.version == null) ? "" : this.version);
+    public String getName() {
+        return this.name;
+    }
+
+    public String getVersion() {
+        return this.version;
+    }
+
+    public Boolean isPremium() {
+        return this.isPremium;
     }
 
     @Override

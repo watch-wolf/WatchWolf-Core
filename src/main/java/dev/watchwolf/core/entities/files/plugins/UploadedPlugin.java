@@ -1,7 +1,5 @@
 package dev.watchwolf.core.entities.files.plugins;
 
-import dev.watchwolf.core.entities.SocketHelper;
-
 import java.util.ArrayList;
 
 public class UploadedPlugin extends Plugin {
@@ -11,9 +9,7 @@ public class UploadedPlugin extends Plugin {
         this.url = url;
     }
 
-    @Override
-    public void sendSocketData(ArrayList<Byte> out) {
-        out.add((byte) 0x01); // uploaded plugin
-        SocketHelper.addString(out, this.url);
+    public String getUrl() {
+        return this.url;
     }
 }

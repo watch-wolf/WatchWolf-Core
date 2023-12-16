@@ -2,14 +2,10 @@ package dev.watchwolf.core.rpc.objects.types.custom.files.plugins;
 
 import dev.watchwolf.core.entities.files.ConfigFile;
 import dev.watchwolf.core.entities.files.plugins.FilePlugin;
-import dev.watchwolf.core.entities.files.plugins.Plugin;
 import dev.watchwolf.core.rpc.channel.MessageChannel;
-import dev.watchwolf.core.rpc.objects.converter.MainSubconverter;
 import dev.watchwolf.core.rpc.objects.converter.RPCConverter;
 import dev.watchwolf.core.rpc.objects.converter.class_type.ClassType;
-import dev.watchwolf.core.rpc.objects.types.RPCObject;
 import dev.watchwolf.core.rpc.objects.types.custom.files.RPCConfigFile;
-import dev.watchwolf.core.rpc.objects.types.natives.composited.RPCString;
 import dev.watchwolf.core.rpc.objects.types.natives.primitive.RPCByte;
 
 public class RPCFilePlugin extends RPCPlugin {
@@ -33,14 +29,14 @@ public class RPCFilePlugin extends RPCPlugin {
 
         @Override
         protected RPCPlugin performWrap(Object obj) throws UnsupportedOperationException {
-            if (obj instanceof ConfigFile) return new RPCFilePlugin((FilePlugin) obj);
+            if (obj instanceof FilePlugin) return new RPCFilePlugin((FilePlugin) obj);
 
             throw new UnsupportedOperationException(this.getClass().getName() + " can't wrap " + obj.getClass().getName());
         }
 
         @Override
         protected <O> O performUnwrap(RPCPlugin obj, ClassType<O> type) throws UnsupportedOperationException {
-            if (type.equals(ConfigFile.class)) return type.cast(((RPCFilePlugin) obj).object);
+            if (type.equals(FilePlugin.class)) return type.cast(((RPCFilePlugin) obj).object);
 
             throw new UnsupportedOperationException(this.getClass().getName() + " can't unwrap " + type.getName());
         }
