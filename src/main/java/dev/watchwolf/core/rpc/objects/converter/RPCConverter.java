@@ -134,7 +134,7 @@ public class RPCConverter<T extends RPCObject> {
 
     protected boolean canLocallyUnwrap(ClassType<? extends RPCObject> rpcType) {
         if (this.locallyConverting == null) return false; // empty implementation
-        return rpcType.isAssignableFrom(this.locallyConverting);
+        return this.locallyConverting.isAssignableFrom(rpcType);
     }
 
     protected T performWrap(Object obj) {

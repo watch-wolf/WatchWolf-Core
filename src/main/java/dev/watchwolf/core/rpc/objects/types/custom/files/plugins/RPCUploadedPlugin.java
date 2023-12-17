@@ -5,6 +5,7 @@ import dev.watchwolf.core.rpc.channel.MessageChannel;
 import dev.watchwolf.core.rpc.objects.converter.RPCConverter;
 import dev.watchwolf.core.rpc.objects.converter.Subconverter;
 import dev.watchwolf.core.rpc.objects.converter.class_type.ClassType;
+import dev.watchwolf.core.rpc.objects.converter.class_type.ClassTypeFactory;
 import dev.watchwolf.core.rpc.objects.types.natives.composited.RPCString;
 import dev.watchwolf.core.rpc.objects.types.natives.primitive.RPCByte;
 
@@ -37,7 +38,7 @@ public class RPCUploadedPlugin extends RPCPlugin {
 
         @Override
         protected <O> O performUnwrap(RPCPlugin obj, ClassType<O> type) throws UnsupportedOperationException {
-            if (type.isAssignableFrom(UploadedPlugin.class)) return type.cast(((RPCUploadedPlugin) obj).object);
+            if (type.equals(ClassTypeFactory.getType(UploadedPlugin.class))) return type.cast(((RPCUploadedPlugin) obj).object);
 
             throw new UnsupportedOperationException(this.getClass().getName() + " can't unwrap " + type.getName());
         }
@@ -53,7 +54,7 @@ public class RPCUploadedPlugin extends RPCPlugin {
 
         @Override
         protected boolean canLocallyWrap(ClassType<?> objectType) {
-            return (objectType.isAssignableFrom(UploadedPlugin.class));
+            return (objectType.equals(ClassTypeFactory.getType(UploadedPlugin.class)));
         }
     }
 }
