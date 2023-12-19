@@ -7,6 +7,7 @@ import dev.watchwolf.core.rpc.channel.sockets.server.ServerSocketMessageChannel;
 import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
+import java.util.concurrent.TimeoutException;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -63,6 +64,34 @@ public class SocketMessageChannelShould {
             assertEquals(toSend.length, got.length, "Different length got");
 
             assertTrue(Arrays.equals(toSend, got), "Got different between sent and got. Sent: " + Arrays.toString(toSend) + "; got: " + Arrays.toString(got));
+        } catch (Exception ex) {
+            throw ex;
+        } finally {
+            if (server != null) server.close();
+            if (client != null) client.close();
+        }
+    }
+
+    @Test
+    public void interruptIfNoData() throws Exception {
+        String host = "127.0.0.1";
+        int port = 8900;
+        MessageChannel server = null, client = null;
+
+        try {
+            server = new ServerSocketChannelFactory(host, port).build().create();
+            client = new ClientSocketChannelFactory(host, port).build().create();
+
+            ((ServerSocketMessageChannel)server).acceptConnection(); // allow client to connect
+
+            // don't send anything
+
+            try {
+                server.get(1, 3000);
+                assertTrue(false, "We expected a TimeoutException; got data instead");
+            } catch (TimeoutException ex) {
+                // ok!
+            }
         } catch (Exception ex) {
             throw ex;
         } finally {
