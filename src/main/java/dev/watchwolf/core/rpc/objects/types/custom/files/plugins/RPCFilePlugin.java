@@ -10,6 +10,8 @@ import dev.watchwolf.core.rpc.objects.converter.class_type.ClassTypeFactory;
 import dev.watchwolf.core.rpc.objects.types.custom.files.RPCConfigFile;
 import dev.watchwolf.core.rpc.objects.types.natives.primitive.RPCByte;
 
+import java.io.IOException;
+
 public class RPCFilePlugin extends RPCPlugin {
     public static final byte FILE_PLUGIN_ID = (byte) 0x02;
 
@@ -18,7 +20,7 @@ public class RPCFilePlugin extends RPCPlugin {
     }
 
     @Override
-    public void send(MessageChannel channel) {
+    public void send(MessageChannel channel) throws IOException {
         FilePlugin plugin = (FilePlugin)this.getObject();
         new RPCByte(FILE_PLUGIN_ID).send(channel); // file plugin type
         new RPCConfigFile(plugin.getFile()).send(channel);
@@ -45,7 +47,7 @@ public class RPCFilePlugin extends RPCPlugin {
         }
 
         @Override
-        protected RPCPlugin performUnmarshall(MessageChannel channel, ClassType<? extends RPCPlugin> type) throws UnsupportedOperationException {
+        protected RPCPlugin performUnmarshall(MessageChannel channel, ClassType<? extends RPCPlugin> type) throws UnsupportedOperationException, IOException {
             byte id = this.getMasterConverter().unmarshall(channel, RPCByte.class).getObject();
             if (id != FILE_PLUGIN_ID) throw new UnsupportedOperationException("Got plugin of different type");
 

@@ -1,5 +1,6 @@
 package dev.watchwolf.core.rpc.channel;
 
+import java.io.IOException;
 import java.util.LinkedList;
 import java.util.concurrent.TimeoutException;
 
@@ -13,12 +14,12 @@ public class ChannelEmu implements MessageChannel {
     }
 
     @Override
-    public void send(byte... data) {
+    public void send(byte... data) throws IOException {
         this.queue.send(data);
     }
 
     @Override
-    public byte[] get(int numBytes, int timeout) throws TimeoutException {
+    public byte[] get(int numBytes, int timeout) throws TimeoutException,IOException {
         byte []r = this.queue.get(numBytes, timeout);
         for (byte b : r) this.gotBytes.add(b);
         return r;
@@ -35,5 +36,15 @@ public class ChannelEmu implements MessageChannel {
     @Override
     public boolean areBytesAvailable() {
         return this.queue.areBytesAvailable();
+    }
+
+    @Override
+    public MessageChannel create() throws IOException {
+        return this.queue.create();
+    }
+
+    @Override
+    public void close() throws IOException {
+        this.queue.close();
     }
 }

@@ -1,6 +1,6 @@
 package dev.watchwolf.core.rpc.channel;
 
-import java.util.Iterator;
+import java.io.IOException;
 import java.util.LinkedList;
 import java.util.concurrent.TimeoutException;
 
@@ -14,12 +14,12 @@ public class ChannelQueue implements MessageChannel {
     }
 
     @Override
-    public void send(byte... data) {
+    public void send(byte... data) throws IOException {
         this.channel.send(data);
     }
 
     @Override
-    public byte[] get(int numBytes, int timeout) throws TimeoutException {
+    public byte[] get(int numBytes, int timeout) throws TimeoutException,IOException {
         byte []r = new byte[numBytes];
 
         // use first the queue
@@ -51,5 +51,15 @@ public class ChannelQueue implements MessageChannel {
     public boolean areBytesAvailable() {
         if (!this.pushedBackBytes.isEmpty()) return true;
         return this.channel.areBytesAvailable();
+    }
+
+    @Override
+    public MessageChannel create() throws IOException {
+        return this.channel.create();
+    }
+
+    @Override
+    public void close() throws IOException {
+        this.channel.close();
     }
 }

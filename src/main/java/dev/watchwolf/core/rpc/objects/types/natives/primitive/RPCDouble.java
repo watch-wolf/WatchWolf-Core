@@ -7,6 +7,8 @@ import dev.watchwolf.core.rpc.objects.converter.class_type.ClassType;
 import dev.watchwolf.core.rpc.objects.converter.class_type.ClassTypeFactory;
 import dev.watchwolf.core.rpc.objects.types.natives.NativeTypeRPCObject;
 
+import java.io.IOException;
+
 public class RPCDouble extends NativeTypeRPCObject<Double> {
     public RPCDouble(Double object) {
         super(object);
@@ -17,7 +19,7 @@ public class RPCDouble extends NativeTypeRPCObject<Double> {
     }
 
     @Override
-    public void send(MessageChannel channel) {
+    public void send(MessageChannel channel) throws IOException {
         long lng = Double.doubleToLongBits(this.object);
         for(int i = 0; i < 8; i++) channel.send((byte)((lng >> ((7 - i) * 8)) & 0xff));
     }
@@ -43,7 +45,7 @@ public class RPCDouble extends NativeTypeRPCObject<Double> {
         }
 
         @Override
-        protected RPCDouble performUnmarshall(MessageChannel channel, ClassType<? extends RPCDouble> type) {
+        protected RPCDouble performUnmarshall(MessageChannel channel, ClassType<? extends RPCDouble> type) throws IOException {
             long lng = 0;
             for (int i = 0; i < 8; i++) lng = (lng << 8) | channel.get();
             return new RPCDouble(Double.longBitsToDouble(lng));

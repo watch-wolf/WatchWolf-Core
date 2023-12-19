@@ -9,6 +9,7 @@ import dev.watchwolf.core.rpc.objects.types.RPCObject;
 import dev.watchwolf.core.rpc.objects.types.natives.NativeTypeRPCObject;
 import dev.watchwolf.core.rpc.objects.types.natives.primitive.RPCShort;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
@@ -24,7 +25,7 @@ public class RPCArray extends NativeTypeRPCObject<Collection<? extends RPCObject
     }
 
     @Override
-    public void send(MessageChannel channel) {
+    public void send(MessageChannel channel) throws IOException {
         new RPCShort(this.object.size()).send(channel);
         for (RPCObject entry : this.object) entry.send(channel);
     }
@@ -72,7 +73,7 @@ public class RPCArray extends NativeTypeRPCObject<Collection<? extends RPCObject
         }
 
         @Override
-        protected RPCArray performUnmarshall(MessageChannel channel, ClassType<? extends RPCArray> type) {
+        protected RPCArray performUnmarshall(MessageChannel channel, ClassType<? extends RPCArray> type) throws IOException {
             // size
             int size = this.getMasterConverter().unmarshall(channel, Short.class);
 

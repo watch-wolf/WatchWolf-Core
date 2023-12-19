@@ -2,7 +2,6 @@ package dev.watchwolf.core.rpc.objects.converter;
 
 import dev.watchwolf.core.entities.files.plugins.Plugin;
 import dev.watchwolf.core.entities.files.plugins.UsualPlugin;
-import dev.watchwolf.core.rpc.objects.converter.class_type.ClassTypeFactory;
 import dev.watchwolf.core.rpc.objects.types.RPCObject;
 import dev.watchwolf.core.rpc.objects.types.custom.files.plugins.RPCUsualPlugin;
 import org.junit.jupiter.api.Test;

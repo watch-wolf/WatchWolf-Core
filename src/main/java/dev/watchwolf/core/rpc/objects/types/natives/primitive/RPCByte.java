@@ -7,6 +7,8 @@ import dev.watchwolf.core.rpc.objects.converter.class_type.ClassType;
 import dev.watchwolf.core.rpc.objects.converter.class_type.ClassTypeFactory;
 import dev.watchwolf.core.rpc.objects.types.natives.NativeTypeRPCObject;
 
+import java.io.IOException;
+
 public class RPCByte extends NativeTypeRPCObject<Byte> {
     public RPCByte(Byte object) {
         super(object);
@@ -21,7 +23,7 @@ public class RPCByte extends NativeTypeRPCObject<Byte> {
     }
 
     @Override
-    public void send(MessageChannel channel) {
+    public void send(MessageChannel channel) throws IOException {
         channel.send(this.object);
     }
 
@@ -46,7 +48,7 @@ public class RPCByte extends NativeTypeRPCObject<Byte> {
         }
 
         @Override
-        protected RPCByte performUnmarshall(MessageChannel channel, ClassType<? extends RPCByte> type) {
+        protected RPCByte performUnmarshall(MessageChannel channel, ClassType<? extends RPCByte> type) throws IOException {
             return new RPCByte(channel.get());
         }
 

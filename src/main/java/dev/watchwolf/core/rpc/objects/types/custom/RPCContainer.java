@@ -14,6 +14,7 @@ import dev.watchwolf.core.rpc.objects.types.RPCObjectWrapper;
 import dev.watchwolf.core.rpc.objects.types.custom.items.RPCItem;
 import dev.watchwolf.core.rpc.objects.types.natives.composited.RPCArray;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
@@ -25,7 +26,7 @@ public class RPCContainer extends RPCObjectWrapper<Container> {
     }
 
     @Override
-    public void send(MessageChannel channel) {
+    public void send(MessageChannel channel) throws IOException {
         Item []toSend = this.getObject().getItems();
         List<RPCItem> send = new ArrayList<>();
 
@@ -55,7 +56,7 @@ public class RPCContainer extends RPCObjectWrapper<Container> {
         }
 
         @Override
-        protected RPCContainer performUnmarshall(MessageChannel channel, ClassType<? extends RPCContainer> type) {
+        protected RPCContainer performUnmarshall(MessageChannel channel, ClassType<? extends RPCContainer> type) throws IOException {
             RPCArray array = this.getMasterConverter().unmarshall(channel, new TemplateClassType<>(RPCArray.class, RPCItem.class));
             Iterator<RPCItem> got = (Iterator<RPCItem>)array.getIterator();
             List<Item> contents = new ArrayList<>();

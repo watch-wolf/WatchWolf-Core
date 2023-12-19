@@ -4,6 +4,8 @@ import dev.watchwolf.core.rpc.channel.MessageChannel;
 import dev.watchwolf.core.rpc.objects.converter.RPCConverter;
 import dev.watchwolf.core.rpc.objects.types.RPCObject;
 
+import java.io.IOException;
+
 public class RPC implements Runnable {
     private final RPCImplementer localImplementation;
     private final MessageChannel remoteConnection;
@@ -15,7 +17,7 @@ public class RPC implements Runnable {
         this.converter = converter;
     }
 
-    public void sendEvent(RPCObject []data) {
+    public void sendEvent(RPCObject []data) throws IOException {
         for (RPCObject o : data) {
             o.send(this.remoteConnection);
         }

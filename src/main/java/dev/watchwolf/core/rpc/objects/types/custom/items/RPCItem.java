@@ -13,13 +13,15 @@ import dev.watchwolf.core.rpc.objects.types.RPCObjectWrapper;
 import dev.watchwolf.core.rpc.objects.types.natives.composited.RPCEnum;
 import dev.watchwolf.core.rpc.objects.types.natives.primitive.RPCByte;
 
+import java.io.IOException;
+
 public class RPCItem extends RPCObjectWrapper<Item> {
     public RPCItem(Item object) {
         super(object);
     }
 
     @Override
-    public void send(MessageChannel channel) {
+    public void send(MessageChannel channel) throws IOException {
         new RPCEnum(this.getObject().getType()).send(channel);
         new RPCByte(this.getObject().getAmount()).send(channel);
     }
@@ -41,7 +43,7 @@ public class RPCItem extends RPCObjectWrapper<Item> {
         }
 
         @Override
-        protected RPCItem performUnmarshall(MessageChannel channel, ClassType<? extends RPCItem> type) {
+        protected RPCItem performUnmarshall(MessageChannel channel, ClassType<? extends RPCItem> type) throws IOException {
             ItemType itemType = (ItemType)this.getMasterConverter().unmarshall(channel, new TemplateClassType<>(RPCEnum.class, ItemType.class)).getObject();
             RPCByte amount = this.getMasterConverter().unmarshall(channel, RPCByte.class);
 

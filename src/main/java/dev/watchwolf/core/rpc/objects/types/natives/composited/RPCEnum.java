@@ -8,6 +8,8 @@ import dev.watchwolf.core.rpc.objects.converter.class_type.TemplateClassType;
 import dev.watchwolf.core.rpc.objects.types.RPCObjectWrapper;
 import dev.watchwolf.core.rpc.objects.types.natives.primitive.RPCShort;
 
+import java.io.IOException;
+
 public class RPCEnum extends RPCObjectWrapper<Enum<?>> {
     private final RPCShort sendObject;
 
@@ -53,7 +55,7 @@ public class RPCEnum extends RPCObjectWrapper<Enum<?>> {
     }
 
     @Override
-    public void send(MessageChannel channel) {
+    public void send(MessageChannel channel) throws IOException {
         this.sendObject.send(channel);
     }
 
@@ -76,7 +78,7 @@ public class RPCEnum extends RPCObjectWrapper<Enum<?>> {
         }
 
         @Override
-        protected RPCEnum performUnmarshall(MessageChannel channel, ClassType<? extends RPCEnum> type) {
+        protected RPCEnum performUnmarshall(MessageChannel channel, ClassType<? extends RPCEnum> type) throws IOException {
             // we send the data as integer
             short got = this.getMasterConverter().unmarshall(channel, Short.class);
             RPCEnum r;

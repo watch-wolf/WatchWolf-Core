@@ -16,6 +16,7 @@ import dev.watchwolf.core.rpc.objects.types.custom.items.RPCItem;
 import dev.watchwolf.core.rpc.objects.types.natives.composited.RPCEnum;
 import dev.watchwolf.core.rpc.objects.types.natives.composited.RPCString;
 
+import java.io.IOException;
 import java.lang.reflect.Constructor;
 
 public class RPCEntity extends RPCObjectWrapper<Entity> {
@@ -24,7 +25,7 @@ public class RPCEntity extends RPCObjectWrapper<Entity> {
     }
 
     @Override
-    public void send(MessageChannel channel) {
+    public void send(MessageChannel channel) throws IOException {
         Entity e = this.getObject();
 
         new RPCEnum(e.getType()).send(channel);
@@ -51,7 +52,7 @@ public class RPCEntity extends RPCObjectWrapper<Entity> {
         }
 
         @Override
-        protected RPCEntity performUnmarshall(MessageChannel channel, ClassType<? extends RPCEntity> type) {
+        protected RPCEntity performUnmarshall(MessageChannel channel, ClassType<? extends RPCEntity> type) throws IOException {
             EntityType entityType = (EntityType) this.getMasterConverter().unmarshall(channel, new TemplateClassType<>(RPCEnum.class, EntityType.class)).getObject();
 
             Position entityPos = this.getMasterConverter().unmarshall(channel, RPCPosition.class).getObject();

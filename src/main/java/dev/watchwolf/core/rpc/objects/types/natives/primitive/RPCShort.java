@@ -7,6 +7,8 @@ import dev.watchwolf.core.rpc.objects.converter.class_type.ClassType;
 import dev.watchwolf.core.rpc.objects.converter.class_type.ClassTypeFactory;
 import dev.watchwolf.core.rpc.objects.types.natives.NativeTypeRPCObject;
 
+import java.io.IOException;
+
 public class RPCShort extends NativeTypeRPCObject<Short> {
     public RPCShort(Short object) {
         super(object);
@@ -17,7 +19,7 @@ public class RPCShort extends NativeTypeRPCObject<Short> {
     }
 
     @Override
-    public void send(MessageChannel channel) {
+    public void send(MessageChannel channel) throws IOException {
         int lsb = this.object & 0xFF,
             msb = (this.object >> 8)&0xFF;
         channel.send((byte)lsb, (byte)msb);
@@ -44,7 +46,7 @@ public class RPCShort extends NativeTypeRPCObject<Short> {
         }
 
         @Override
-        protected RPCShort performUnmarshall(MessageChannel channel, ClassType<? extends RPCShort> type) {
+        protected RPCShort performUnmarshall(MessageChannel channel, ClassType<? extends RPCShort> type) throws IOException {
             int lsb = channel.get(),
                 msb = channel.get();
             return new RPCShort((short)(msb << 8 | lsb));

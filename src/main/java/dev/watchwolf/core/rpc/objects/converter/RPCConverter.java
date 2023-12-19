@@ -8,6 +8,7 @@ import dev.watchwolf.core.rpc.objects.converter.class_type.ClassTypeFactory;
 import dev.watchwolf.core.rpc.objects.types.RPCObject;
 
 import javax.naming.InsufficientResourcesException;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -76,7 +77,7 @@ public class RPCConverter<T extends RPCObject> {
         return this.unwrap(obj, ClassTypeFactory.getType(type));
     }
 
-    protected RPCObject _unmarshall(ChannelQueue channel, ClassType<? extends RPCObject> rpcType) {
+    protected RPCObject _unmarshall(ChannelQueue channel, ClassType<? extends RPCObject> rpcType) throws IOException {
         if (this.canLocallyUnwrap(rpcType)) {
             ChannelEmu emulatedChannel = new ChannelEmu(channel);
             try {
@@ -99,14 +100,14 @@ public class RPCConverter<T extends RPCObject> {
         throw new UnsupportedOperationException("No converter was found with the argument obj_type=" + rpcType.getName() + " in the class, nor the sub-classes.");
     }
 
-    public <O> O unmarshall(MessageChannel channel, ClassType<O> type) {
+    public <O> O unmarshall(MessageChannel channel, ClassType<O> type) throws IOException {
         ClassType<? extends RPCObject> rpcType = this.getRPCWrapClass(type);
         ChannelQueue queuedChannel = new ChannelQueue(channel);
         RPCObject unmarshalledRpcObject = this._unmarshall(queuedChannel, rpcType);
         return this.unwrap(unmarshalledRpcObject, type);
     }
 
-    public <O> O unmarshall(MessageChannel channel, Class<O> type) {
+    public <O> O unmarshall(MessageChannel channel, Class<O> type) throws IOException {
         return this.unmarshall(channel, ClassTypeFactory.getType(type));
     }
 
@@ -145,7 +146,7 @@ public class RPCConverter<T extends RPCObject> {
         throw new UnsupportedOperationException("Undefined operation.");
     }
 
-    protected T performUnmarshall(MessageChannel channel, ClassType<? extends T> type) {
+    protected T performUnmarshall(MessageChannel channel, ClassType<? extends T> type) throws IOException {
         throw new UnsupportedOperationException("Undefined operation.");
     }
 

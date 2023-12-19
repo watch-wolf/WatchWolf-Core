@@ -10,6 +10,7 @@ import dev.watchwolf.core.rpc.objects.types.RPCObject;
 import dev.watchwolf.core.rpc.objects.types.natives.NativeTypeRPCObject;
 import dev.watchwolf.core.rpc.objects.types.natives.primitive.RPCChar;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 
@@ -19,7 +20,7 @@ public class RPCString extends NativeTypeRPCObject<String> {
     }
 
     @Override
-    public void send(MessageChannel channel) {
+    public void send(MessageChannel channel) throws IOException {
         Collection<RPCChar> data = new ArrayList<>();
         for (char c : this.object.toCharArray()) data.add(new RPCChar(c));
         new RPCArray(data).send(channel);
@@ -42,7 +43,7 @@ public class RPCString extends NativeTypeRPCObject<String> {
         }
 
         @Override
-        protected RPCString performUnmarshall(MessageChannel channel, ClassType<? extends RPCString> type) {
+        protected RPCString performUnmarshall(MessageChannel channel, ClassType<? extends RPCString> type) throws IOException {
             // strings are arrays of characters
             RPCArray array = this.getMasterConverter().unmarshall(channel, new TemplateClassType<>(RPCArray.class, RPCChar.class));
 

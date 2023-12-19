@@ -2,6 +2,9 @@ package dev.watchwolf.core.rpc.channel.sockets;
 
 import dev.watchwolf.core.rpc.channel.MessageChannel;
 
+import java.io.IOException;
+import java.util.concurrent.TimeoutException;
+
 public abstract class SocketMessageChannel implements MessageChannel {
     protected final String host;
     protected final int port;
@@ -12,11 +15,17 @@ public abstract class SocketMessageChannel implements MessageChannel {
     }
 
     @Override
-    public abstract void send(byte[] data);
+    public abstract void send(byte[] data) throws IOException;
 
     @Override
-    public abstract byte[] get(int numBytes, int timeout);
+    public abstract byte[] get(int numBytes, int timeout) throws TimeoutException, IOException;
 
     @Override
-    public abstract boolean areBytesAvailable();
+    public boolean areBytesAvailable() {
+        throw new UnsupportedOperationException("Can't tell if there's bytes left in a socket; use `get` with the `timeout`.");
+    }
+
+    public abstract boolean isClosed();
+
+    public abstract boolean isEndConnected();
 }

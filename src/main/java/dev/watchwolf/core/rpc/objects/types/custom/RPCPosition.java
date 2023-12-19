@@ -10,13 +10,15 @@ import dev.watchwolf.core.rpc.objects.types.RPCObjectWrapper;
 import dev.watchwolf.core.rpc.objects.types.natives.composited.RPCString;
 import dev.watchwolf.core.rpc.objects.types.natives.primitive.RPCDouble;
 
+import java.io.IOException;
+
 public class RPCPosition extends RPCObjectWrapper<Position> {
     public RPCPosition(Position object) {
         super(object);
     }
 
     @Override
-    public void send(MessageChannel channel) {
+    public void send(MessageChannel channel) throws IOException {
         new RPCString(this.getObject().getWorld()).send(channel);
         new RPCDouble(this.getObject().getX()).send(channel);
         new RPCDouble(this.getObject().getY()).send(channel);
@@ -40,7 +42,7 @@ public class RPCPosition extends RPCObjectWrapper<Position> {
         }
 
         @Override
-        protected RPCPosition performUnmarshall(MessageChannel channel, ClassType<? extends RPCPosition> type) {
+        protected RPCPosition performUnmarshall(MessageChannel channel, ClassType<? extends RPCPosition> type) throws IOException {
             String world = this.getMasterConverter().unmarshall(channel, String.class);
             double x = this.getMasterConverter().unmarshall(channel, Double.class);
             double y = this.getMasterConverter().unmarshall(channel, Double.class);

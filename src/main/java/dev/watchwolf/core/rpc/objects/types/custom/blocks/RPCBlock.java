@@ -11,13 +11,15 @@ import dev.watchwolf.core.rpc.objects.types.RPCObjectWrapper;
 import dev.watchwolf.core.rpc.objects.types.natives.primitive.RPCByte;
 import dev.watchwolf.core.rpc.objects.types.natives.primitive.RPCShort;
 
+import java.io.IOException;
+
 public class RPCBlock extends RPCObjectWrapper<Block> {
     public RPCBlock(Block object) {
         super(object);
     }
 
     @Override
-    public void send(MessageChannel channel) {
+    public void send(MessageChannel channel) throws IOException {
         new RPCShort(this.getObject().getID()).send(channel);
         // TODO send the additional arguments
         for (int i = 2; i < RPCBlockConverter.BLOCK_SOCKET_DATA_SIZE; i++) new RPCByte().send(channel);
@@ -48,7 +50,7 @@ public class RPCBlock extends RPCObjectWrapper<Block> {
         }
 
         @Override
-        protected RPCBlock performUnmarshall(MessageChannel channel, ClassType<? extends RPCBlock> type) {
+        protected RPCBlock performUnmarshall(MessageChannel channel, ClassType<? extends RPCBlock> type) throws IOException {
             short blockId = this.getMasterConverter().unmarshall(channel, RPCShort.class).getObject();
 
             Block block = Blocks.getBlockById(blockId);

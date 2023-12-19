@@ -9,6 +9,8 @@ import dev.watchwolf.core.rpc.objects.converter.class_type.ClassTypeFactory;
 import dev.watchwolf.core.rpc.objects.types.natives.composited.RPCString;
 import dev.watchwolf.core.rpc.objects.types.natives.primitive.RPCByte;
 
+import java.io.IOException;
+
 public class RPCUsualPlugin extends RPCPlugin {
     public static final byte USUAL_PLUGIN_ID = (byte) 0x00;
 
@@ -17,7 +19,7 @@ public class RPCUsualPlugin extends RPCPlugin {
     }
 
     @Override
-    public void send(MessageChannel channel) {
+    public void send(MessageChannel channel) throws IOException {
         UsualPlugin plugin = (UsualPlugin) this.getObject();
         new RPCByte(USUAL_PLUGIN_ID).send(channel); // file plugin type
         new RPCString(plugin.getName()).send(channel);
@@ -46,7 +48,7 @@ public class RPCUsualPlugin extends RPCPlugin {
         }
 
         @Override
-        protected RPCPlugin performUnmarshall(MessageChannel channel, ClassType<? extends RPCPlugin> type) throws UnsupportedOperationException {
+        protected RPCPlugin performUnmarshall(MessageChannel channel, ClassType<? extends RPCPlugin> type) throws UnsupportedOperationException, IOException {
             byte id = this.getMasterConverter().unmarshall(channel, RPCByte.class).getObject();
             if (id != USUAL_PLUGIN_ID) throw new UnsupportedOperationException("Got plugin of different type");
 

@@ -10,13 +10,15 @@ import dev.watchwolf.core.rpc.objects.types.RPCObjectWrapper;
 import dev.watchwolf.core.rpc.objects.types.natives.composited.RPCString;
 import dev.watchwolf.core.rpc.objects.types.natives.primitive.RPCByte;
 
+import java.io.IOException;
+
 public class RPCConfigFile extends RPCObjectWrapper<ConfigFile> {
     public RPCConfigFile(ConfigFile object) {
         super(object);
     }
 
     @Override
-    public void send(MessageChannel channel) {
+    public void send(MessageChannel channel) throws IOException {
         ConfigFile configFile = this.getObject();
 
         new RPCString(configFile.getName() + ((configFile.getExtension() != null) ? ("." + configFile.getExtension()): "")).send(channel);
@@ -50,7 +52,7 @@ public class RPCConfigFile extends RPCObjectWrapper<ConfigFile> {
         }
 
         @Override
-        protected RPCConfigFile performUnmarshall(MessageChannel channel, ClassType<? extends RPCConfigFile> type) {
+        protected RPCConfigFile performUnmarshall(MessageChannel channel, ClassType<? extends RPCConfigFile> type) throws IOException {
             RPCString nameAndExtension = this.getMasterConverter().unmarshall(channel, RPCString.class);
             RPCString offsetPath = this.getMasterConverter().unmarshall(channel, RPCString.class);
 
