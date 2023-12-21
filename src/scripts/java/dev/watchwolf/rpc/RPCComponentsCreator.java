@@ -9,11 +9,15 @@ import dev.watchwolf.core.rpc.RPC;
 import dev.watchwolf.core.rpc.RPCImplementer;
 import dev.watchwolf.core.rpc.channel.MessageChannel;
 import dev.watchwolf.core.rpc.objects.converter.RPCConverter;
+import dev.watchwolf.rpc.definitions.Content;
+import dev.watchwolf.rpc.definitions.Event;
 import dev.watchwolf.rpc.definitions.WatchWolfComponent;
 
 import java.io.BufferedWriter;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.function.Function;
 
 public class RPCComponentsCreator {
@@ -52,17 +56,78 @@ public class RPCComponentsCreator {
                                 .findFirst().orElse(null);
     }
 
+    private static Method getInterfaceMethod(Event event) {
+        Method interfaceMethod = new Method(void.class, event.getFunctionName());
+
+        interfaceMethod.addCommentLine(event.getDescription());
+        if (event.getRelatesTo() != null) interfaceMethod.addCommentLine("Relates to `" + event.getRelatesTo() + "` method");
+
+        for (Content content : event.getContents()) {
+            if (content.getType().startsWith("_")) continue; // internal use
+
+            Parameter param = new Parameter(TypeToRPCType.typeToName(TypeToRPCType.getType(content.getType())), content.getName());
+            if (content.getDescription() != null) interfaceMethod.addCommentLine("@param " + content.getName() + ": " + content.getDescription());
+            interfaceMethod.addParameter(param);
+        }
+
+        return interfaceMethod;
+    }
+
+    private static Method getInterfaceMethodForClass(Event event) {
+        Method interfaceMethod = getInterfaceMethod(event);
+        interfaceMethod.addModifier(Modifier.PUBLIC);
+        interfaceMethod.addCommentLine("Overrides method defined by interface `" + event.getClassName() + "`");
+        // TODO override modifier
+        return interfaceMethod;
+    }
+
+    private static void generateRPCEvent(Event event, String componentName, String stubsOutPackage, String stubsOutPath) {
+        JavaClass clazz = new JavaClass(stubsOutPackage, event.getClassName());
+        clazz.addModifier(Modifier.PUBLIC);
+
+        clazz.addCommentLine("Event produced by " + componentName);
+        clazz.addCommentLine("/!\\ Class generated automatically; do not modify. Please refer to dev.watchwolf.rpc.RPCComponentsCreator /!\\");
+
+        // create & add method
+        clazz.addElement( getInterfaceMethod(event) );
+
+        // write to file
+        String localPath = stubsOutPath + "/" + event.getClassName() + ".java";
+        try (FileWriter writer = new FileWriter(localPath);
+             BufferedWriter bwr = new BufferedWriter(writer);) {
+            String contents = clazz.toString()
+                                    .replaceAll("class " + event.getClassName(), "interface " + event.getClassName());
+            bwr.write(contents);
+        } catch (IOException ex) {
+            ex.printStackTrace();
+        }
+    }
+
     public static void generateRPCComponents(WatchWolfComponent component, String stubsOutPackage, String stubsOutPath, String subsystemOutPackage, String subsystemOutPath) {
+        //
+        // 1. Generate the events
+        //
+        for (Event e : component.getAsyncReturns()) generateRPCEvent(e, component.getName(), stubsOutPackage, stubsOutPath);
+
         // ---------------------
         // 1. Get the local stub
         // ---------------------
         String localName = component.getName().replaceAll("\\s", "") + "LocalStub";
-        String []localImplements = { RPCImplementer.class.getName() };
-        JavaClass localClass = getCommonClass(stubsOutPackage, localName, localImplements, component);
+        List<String> localImplements = new ArrayList<>();
+        localImplements.add(RPCImplementer.class.getName());
+        for (Event e : component.getAsyncReturns()) localImplements.add(stubsOutPackage + "." + e.getClassName()); // the LocalStub implements all events
+        JavaClass localClass = getCommonClass(stubsOutPackage, localName, localImplements.toArray(new String[0]), component);
+        localClass.addModifier(Modifier.PUBLIC);
 
         Method localForwardMethod = getForwardMethod(localClass);
         if (localForwardMethod == null) throw new RuntimeException("Couldn't get the 'forward' method");
         localForwardMethod.addContent(""); // TODO
+
+        for (Event event : component.getAsyncReturns()) {
+            Method eventMethod = getInterfaceMethodForClass(event);
+            eventMethod.addContent(""); // TODO
+            localClass.addElement(eventMethod);
+        }
 
         // ----------------------
         // 2. Get the remote stub

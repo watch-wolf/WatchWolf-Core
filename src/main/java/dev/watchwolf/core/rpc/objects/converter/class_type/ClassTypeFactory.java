@@ -12,4 +12,9 @@ public class ClassTypeFactory {
         if (classType == null) return null;
         return new ClassType<>(classType);
     }
+
+    public static <T> ClassType<T> getTemplateType(Class<T> templateType, Class<?> type) {
+        if (templateType == null) return null;
+        return new TemplateClassType<>(templateType, type);
+    }
 }

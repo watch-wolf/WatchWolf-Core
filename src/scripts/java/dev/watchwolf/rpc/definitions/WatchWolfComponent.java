@@ -15,7 +15,7 @@ public class WatchWolfComponent {
     private List<Petition> petitions;
 
     @SerializedName(value = "AsyncReturns")
-    private List<Events> asyncReturns;
+    private List<Event> asyncReturns;
 
     public String getName() {
         return name;
@@ -27,5 +27,17 @@ public class WatchWolfComponent {
 
     public String getVersion() {
         return version;
+    }
+
+    public int getDestinyId() {
+        return destinyId;
+    }
+
+    public List<Petition> getPetitions() {
+        return petitions;
+    }
+
+    public List<Event> getAsyncReturns() {
+        return asyncReturns;
     }
 }
