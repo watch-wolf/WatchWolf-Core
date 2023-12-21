@@ -17,7 +17,7 @@ public class RPC implements Runnable {
         this.converter = converter;
     }
 
-    public void sendEvent(RPCObject []data) throws IOException {
+    public void sendEvent(RPCObject ...data) throws IOException {
         for (RPCObject o : data) {
             o.send(this.remoteConnection);
         }

@@ -23,8 +23,11 @@ this.rpc = handler;
 * Relates to `startServer` method
 * Overrides method defined by interface `ServerStartedEvent`
 */
-public void serverStarted() {
-
+public void serverStarted() throws java.io.IOException {
+this.rpc.sendEvent(
+		new dev.watchwolf.core.rpc.objects.types.natives.primitive.RPCByte((byte) 0b0010_1_000),
+		new dev.watchwolf.core.rpc.objects.types.natives.primitive.RPCByte((byte) 0b00000000)
+);
 }
 
 /**
@@ -32,8 +35,11 @@ public void serverStarted() {
 * @param exception: Full stack trace of the raised error captured by the server console.
 * Overrides method defined by interface `CapturedExceptionEvent`
 */
-public void capturedException(java.lang.String exception) {
-
+public void capturedException(java.lang.String exception) throws java.io.IOException {
+this.rpc.sendEvent(
+		new dev.watchwolf.core.rpc.objects.types.natives.primitive.RPCByte((byte) 0b0011_1_000),
+		new dev.watchwolf.core.rpc.objects.types.natives.primitive.RPCByte((byte) 0b00000000)
+);
 }
 
 }

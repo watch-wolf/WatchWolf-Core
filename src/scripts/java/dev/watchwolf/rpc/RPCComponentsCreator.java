@@ -9,6 +9,7 @@ import dev.watchwolf.core.rpc.RPC;
 import dev.watchwolf.core.rpc.RPCImplementer;
 import dev.watchwolf.core.rpc.channel.MessageChannel;
 import dev.watchwolf.core.rpc.objects.converter.RPCConverter;
+import dev.watchwolf.core.rpc.objects.types.natives.primitive.RPCByte;
 import dev.watchwolf.rpc.definitions.Content;
 import dev.watchwolf.rpc.definitions.Event;
 import dev.watchwolf.rpc.definitions.WatchWolfComponent;
@@ -19,6 +20,8 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Function;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class RPCComponentsCreator {
     private static JavaClass getCommonClass(String pckge, String localName, String []localImplements, WatchWolfComponent component) {
@@ -89,7 +92,8 @@ public class RPCComponentsCreator {
         clazz.addCommentLine("/!\\ Class generated automatically; do not modify. Please refer to dev.watchwolf.rpc.RPCComponentsCreator /!\\");
 
         // create & add method
-        clazz.addElement( getInterfaceMethod(event) );
+        Method interfaceMethod = getInterfaceMethod(event);
+        clazz.addElement(interfaceMethod);
 
         // write to file
         String localPath = stubsOutPath + "/" + event.getClassName() + ".java";
@@ -97,10 +101,47 @@ public class RPCComponentsCreator {
              BufferedWriter bwr = new BufferedWriter(writer);) {
             String contents = clazz.toString()
                                     .replaceAll("class " + event.getClassName(), "interface " + event.getClassName());
+            // throws
+            Pattern p = Pattern.compile("(" + interfaceMethod.getName() + "\\([^\\)]*\\))(;)");
+            Matcher m = p.matcher(contents);
+            if (m.find()) {
+                contents = m.replaceAll("$1 throws java.io.IOException$2");
+            }
+
             bwr.write(contents);
         } catch (IOException ex) {
             ex.printStackTrace();
         }
+    }
+
+    private static String fillEventCall(WatchWolfComponent component, Event event) {
+        StringBuilder sb = new StringBuilder();
+
+        List<Content> c = event.getContents();
+        Content operation = c.get(0);
+        if (!operation.getType().equals("_operation")) throw new IllegalArgumentException("Event must have a first content of type '_operation'");
+        c = c.subList(1, c.size());
+
+        int header_lsb = component.getDestinyId() | 0b0000_1_000
+                            | ((((Number)operation.getValue()).intValue() & 0b1111) << 4),
+            header_msb = ((Number)operation.getValue()).intValue() >> 4;
+
+        sb.append("this.rpc.sendEvent(\n");
+        // header
+        String header_lsb_str = Integer.toBinaryString(header_lsb);
+        while (header_lsb_str.length() < 8) header_lsb_str = "0" + header_lsb_str;
+        sb.append("\t\tnew " + RPCByte.class.getName() + "((byte) 0b" + header_lsb_str.substring(0, 4) + "_" + header_lsb_str.charAt(4) + "_" + header_lsb_str.substring(5, 8) + "),\n");
+        String header_msb_str = Integer.toBinaryString(header_msb);
+        while (header_msb_str.length() < 8) header_msb_str = "0" + header_msb_str;
+        sb.append("\t\tnew " + RPCByte.class.getName() + "((byte) 0b" + header_msb_str + "),\n");
+        // arguments
+        // TODO
+
+        // done
+        sb.setLength(sb.length()-2); // remove last ',\n'
+        sb.append("\n);");
+
+        return sb.toString();
     }
 
     public static void generateRPCComponents(WatchWolfComponent component, String stubsOutPackage, String stubsOutPath, String subsystemOutPackage, String subsystemOutPath) {
@@ -123,10 +164,12 @@ public class RPCComponentsCreator {
         if (localForwardMethod == null) throw new RuntimeException("Couldn't get the 'forward' method");
         localForwardMethod.addContent(""); // TODO
 
+        List<Method> eventMethods = new ArrayList<>();
         for (Event event : component.getAsyncReturns()) {
             Method eventMethod = getInterfaceMethodForClass(event);
-            eventMethod.addContent(""); // TODO
+            eventMethod.addContent(fillEventCall(component, event));
             localClass.addElement(eventMethod);
+            eventMethods.add(eventMethod);
         }
 
         // ----------------------
@@ -140,7 +183,17 @@ public class RPCComponentsCreator {
         String localPath = stubsOutPath + "/" + localName + ".java";
         try (FileWriter writer = new FileWriter(localPath);
              BufferedWriter bwr = new BufferedWriter(writer);) {
-            bwr.write(localClass.toString());
+            String classText = localClass.toString();
+            // throws
+            for (Method eventMethod : eventMethods) {
+                Pattern p = Pattern.compile("(" + eventMethod.getName() + "\\([^\\)]*\\))(\\s*\\{)");
+                Matcher m = p.matcher(classText);
+                if (m.find()) {
+                    classText = m.replaceAll("$1 throws java.io.IOException$2");
+                }
+            }
+
+            bwr.write(classText);
         } catch (IOException ex) {
             ex.printStackTrace();
         }

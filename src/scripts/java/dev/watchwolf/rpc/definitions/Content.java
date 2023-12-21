@@ -4,6 +4,7 @@ public class Content {
     private String type;
     private String name;
     private String description;
+    private Object value;
 
     public String getType() {
         return type;
@@ -15,5 +16,9 @@ public class Content {
 
     public String getDescription() {
         return description;
+    }
+
+    public Object getValue() {
+        return this.value;
     }
 }

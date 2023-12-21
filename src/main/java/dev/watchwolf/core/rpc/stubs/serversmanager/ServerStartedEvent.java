@@ -11,6 +11,6 @@ public interface ServerStartedEvent {
 * The requested server was started successfully.
 * Relates to `startServer` method
 */
-void serverStarted();
+void serverStarted() throws java.io.IOException;
 
 }
