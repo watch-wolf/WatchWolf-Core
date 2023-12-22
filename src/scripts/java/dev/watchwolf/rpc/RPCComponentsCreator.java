@@ -9,6 +9,8 @@ import dev.watchwolf.core.rpc.RPC;
 import dev.watchwolf.core.rpc.RPCImplementer;
 import dev.watchwolf.core.rpc.channel.MessageChannel;
 import dev.watchwolf.core.rpc.objects.converter.RPCConverter;
+import dev.watchwolf.core.rpc.objects.converter.class_type.ClassType;
+import dev.watchwolf.core.rpc.objects.types.RPCObject;
 import dev.watchwolf.core.rpc.objects.types.natives.primitive.RPCByte;
 import dev.watchwolf.rpc.definitions.Content;
 import dev.watchwolf.rpc.definitions.Event;
@@ -46,7 +48,7 @@ public class RPCComponentsCreator {
         Method setRPCMethod = new Method(void.class, "setHandler");
         setRPCMethod.addParameter(new Parameter(RPC.class.getName(), "handler"));
         setRPCMethod.addModifier(Modifier.PUBLIC);
-        setRPCMethod.addContent("this.rpc = handler;");
+        setRPCMethod.addContent("\tthis.rpc = handler;");
 
         clazz.addElement(setRPCMethod);
         clazz.addField(rpcNode);
@@ -117,29 +119,35 @@ public class RPCComponentsCreator {
     private static String fillEventCall(WatchWolfComponent component, Event event) {
         StringBuilder sb = new StringBuilder();
 
-        List<Content> c = event.getContents();
-        Content operation = c.get(0);
+        List<Content> arguments = event.getContents();
+        Content operation = arguments.get(0);
         if (!operation.getType().equals("_operation")) throw new IllegalArgumentException("Event must have a first content of type '_operation'");
-        c = c.subList(1, c.size());
+        arguments = arguments.subList(1, arguments.size());
 
         int header_lsb = component.getDestinyId() | 0b0000_1_000
                             | ((((Number)operation.getValue()).intValue() & 0b1111) << 4),
             header_msb = ((Number)operation.getValue()).intValue() >> 4;
 
-        sb.append("this.rpc.sendEvent(\n");
+        sb.append("\tif (this.rpc == null) throw new ").append(RuntimeException.class.getName()).append("(\"Send event call before RPC instance\");\n")
+            .append("\tsynchronized (this) {\n")
+            .append("\t\tthis.rpc.sendEvent(\n");
         // header
         String header_lsb_str = Integer.toBinaryString(header_lsb);
         while (header_lsb_str.length() < 8) header_lsb_str = "0" + header_lsb_str;
-        sb.append("\t\tnew " + RPCByte.class.getName() + "((byte) 0b" + header_lsb_str.substring(0, 4) + "_" + header_lsb_str.charAt(4) + "_" + header_lsb_str.substring(5, 8) + "),\n");
+        sb.append("\t\t\t\tnew " + RPCByte.class.getName() + "((byte) 0b" + header_lsb_str.substring(0, 4) + "_" + header_lsb_str.charAt(4) + "_" + header_lsb_str.substring(5, 8) + "),\n");
         String header_msb_str = Integer.toBinaryString(header_msb);
         while (header_msb_str.length() < 8) header_msb_str = "0" + header_msb_str;
-        sb.append("\t\tnew " + RPCByte.class.getName() + "((byte) 0b" + header_msb_str + "),\n");
+        sb.append("\t\t\t\tnew " + RPCByte.class.getName() + "((byte) 0b" + header_msb_str + "),\n");
         // arguments
-        // TODO
+        for (Content arg : arguments) {
+            ClassType<? extends RPCObject> rpcArgType = TypeToRPCType.getRPCType(arg.getType());
+            if (rpcArgType == null) throw new IllegalArgumentException("Couldn't parse " + arg.getType() + " into RPC!\n");
+            sb.append("\t\t\t\tnew " + rpcArgType.getClassType().getName() + "(" + arg.getName() + "),\n");
+        }
 
         // done
         sb.setLength(sb.length()-2); // remove last ',\n'
-        sb.append("\n);");
+        sb.append("\n\t\t);\n\t}");
 
         return sb.toString();
     }
@@ -160,9 +168,27 @@ public class RPCComponentsCreator {
         JavaClass localClass = getCommonClass(stubsOutPackage, localName, localImplements.toArray(new String[0]), component);
         localClass.addModifier(Modifier.PUBLIC);
 
+        Method pLocalForwardMethod = new Method(void.class, "forwardCall");
+        pLocalForwardMethod.addModifier(Modifier.PRIVATE);
+        // TODO add "sub-group" for Server
+        pLocalForwardMethod.addParameter(new Parameter(byte.class, "origin"))
+                            .addParameter(new Parameter(boolean.class, "isReturn"))
+                            .addParameter(new Parameter(short.class, "operation"))
+                            .addParameter(new Parameter(MessageChannel.class.getName(), "channel"))
+                            .addParameter(new Parameter(RPCConverter.class.getName() + "<?>", "converter"));
+        pLocalForwardMethod.addContent(""); // TODO
+        localClass.addElement(pLocalForwardMethod);
+
         Method localForwardMethod = getForwardMethod(localClass);
         if (localForwardMethod == null) throw new RuntimeException("Couldn't get the 'forward' method");
-        localForwardMethod.addContent(""); // TODO
+        localForwardMethod.addContent("\tsynchronized (this) {")
+                        .addContent("\t\tshort info = converter.unmarshall(channel, Short.class);")
+                        .addContent("\t\tbyte origin = (byte)(info & 0b111);")
+                        .addContent("\t\tboolean isReturn = (info & 0b1_000) > 0;")
+                        .addContent("\t\tshort operation = (short)(info >> 4);")
+                        .addContent()
+                        .addContent("\t\tthis.forwardCall(origin, isReturn, operation, channel, converter);")
+                        .addContent("\t}");
 
         List<Method> eventMethods = new ArrayList<>();
         for (Event event : component.getAsyncReturns()) {
@@ -191,6 +217,11 @@ public class RPCComponentsCreator {
                 if (m.find()) {
                     classText = m.replaceAll("$1 throws java.io.IOException$2");
                 }
+            }
+            Pattern p = Pattern.compile("(forwardCall\\([^\\)]*\\))(\\s*\\{)");
+            Matcher m = p.matcher(classText);
+            if (m.find()) {
+                classText = m.replaceAll("$1 throws java.io.IOException$2");
             }
 
             bwr.write(classText);
