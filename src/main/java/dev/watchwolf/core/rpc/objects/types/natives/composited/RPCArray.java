@@ -78,11 +78,12 @@ public class RPCArray extends NativeTypeRPCObject<Collection<? extends RPCObject
             int size = this.getMasterConverter().unmarshall(channel, Short.class);
 
             if (!(type instanceof TemplateClassType)) throw new IllegalArgumentException("A list must be a template");
-            TemplateClassType<? extends RPCArray,? extends RPCObject> subtype = (TemplateClassType<? extends RPCArray,? extends RPCObject>)type;
+            TemplateClassType<? extends RPCArray,?> subtype = (TemplateClassType<? extends RPCArray,?>)type;
+            if (!subtype.getSubtype().isAssignableFrom(RPCObject.class)) throw new IllegalArgumentException("`type` sub-type must be an RPC type!");
 
             // elements
             Collection<RPCObject> elements = new ArrayList<>();
-            ClassType<? extends RPCObject> elementsType = subtype.getSubtype();
+            ClassType<? extends RPCObject> elementsType = (TemplateClassType<? extends RPCArray,? extends RPCObject>)subtype.getSubtype();
             for (int n = 0; n < size; n++) {
                 elements.add(this.getMasterConverter().unmarshall(channel, elementsType));
             }

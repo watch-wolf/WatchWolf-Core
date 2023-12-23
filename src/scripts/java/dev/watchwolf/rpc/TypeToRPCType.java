@@ -8,7 +8,6 @@ import dev.watchwolf.core.rpc.objects.converter.class_type.ClassType;
 import dev.watchwolf.core.rpc.objects.converter.class_type.ClassTypeFactory;
 import dev.watchwolf.core.rpc.objects.converter.class_type.TemplateClassType;
 import dev.watchwolf.core.rpc.objects.types.RPCObject;
-import dev.watchwolf.core.rpc.objects.types.natives.composited.RPCString;
 
 import java.util.Collection;
 import java.util.HashMap;
@@ -16,8 +15,12 @@ import java.util.Map;
 
 public class TypeToRPCType {
     public static ClassType<? extends RPCObject> getRPCType(String type) {
-        RPCConverter<?> converter = new RPCObjectsConverterFactory().build();
         ClassType<?> nativeType = getType(type);
+        return getRPCType(nativeType);
+    }
+
+    public static ClassType<? extends RPCObject> getRPCType(ClassType<?> nativeType) {
+        RPCConverter<?> converter = new RPCObjectsConverterFactory().build();
         return (nativeType == null) ? null : converter.getRPCWrapClass(nativeType);
     }
 
@@ -42,10 +45,9 @@ public class TypeToRPCType {
     }
 
     public static ClassType<?> getType(String type) {
-        if (type.equals("ServerType")) return ClassTypeFactory.getType(RPCString.class);
+        if (type.equals("ServerType")) return ClassTypeFactory.getType(String.class);
 
         try {
-
             ClassType<?> t;
             if (!type.endsWith("[]")) t = ClassTypeFactory.getType(classForSimpleName(type));
             else {

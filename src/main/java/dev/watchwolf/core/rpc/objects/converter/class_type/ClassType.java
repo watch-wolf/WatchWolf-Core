@@ -19,7 +19,7 @@ public class ClassType<T> {
     }
 
     public boolean isAssignableFrom(Class<?> classType) {
-        return this.getClassType().isAssignableFrom(classType);
+        return classType.isAssignableFrom(this.getClassType());
     }
 
     public String getName() {

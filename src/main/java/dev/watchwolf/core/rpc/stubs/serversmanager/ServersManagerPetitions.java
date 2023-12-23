@@ -21,6 +21,6 @@ Once a 'start server' request is received the program should create a server wit
 * @param maps: Maps to load to the server.
 * @param configFiles: Additional server config files.
 */
-void startServer(dev.watchwolf.core.rpc.objects.types.natives.composited.RPCString serverType, java.lang.String serverVersion, java.util.Collection<dev.watchwolf.core.entities.files.plugins.Plugin> plugins, java.util.Collection<dev.watchwolf.core.entities.files.ConfigFile> maps, java.util.Collection<dev.watchwolf.core.entities.files.ConfigFile> configFiles) throws java.io.IOException;
+void startServer(java.lang.String serverType, java.lang.String serverVersion, java.util.Collection<dev.watchwolf.core.entities.files.plugins.Plugin> plugins, java.util.Collection<dev.watchwolf.core.entities.files.ConfigFile> maps, java.util.Collection<dev.watchwolf.core.entities.files.ConfigFile> configFiles) throws java.io.IOException;
 
 }

@@ -12,6 +12,7 @@ public class RPCObjectsConverterFactory {
 
     public RPCConverter<?> build() {
         final RPCConverter<?> r = new RPCConverter<>();
+        r.setMasterConverter(r); // the master converter is itself
 
         Reflections reflections = new Reflections("dev.watchwolf.core.rpc.objects.types");
         Set<Class<? extends RPCConverter>> allClasses = reflections.getSubTypesOf(RPCConverter.class);

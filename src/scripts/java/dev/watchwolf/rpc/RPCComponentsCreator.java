@@ -10,7 +10,10 @@ import dev.watchwolf.core.rpc.RPCImplementer;
 import dev.watchwolf.core.rpc.channel.MessageChannel;
 import dev.watchwolf.core.rpc.objects.converter.RPCConverter;
 import dev.watchwolf.core.rpc.objects.converter.class_type.ClassType;
+import dev.watchwolf.core.rpc.objects.converter.class_type.ClassTypeFactory;
+import dev.watchwolf.core.rpc.objects.converter.class_type.TemplateClassType;
 import dev.watchwolf.core.rpc.objects.types.RPCObject;
+import dev.watchwolf.core.rpc.objects.types.natives.composited.RPCString;
 import dev.watchwolf.core.rpc.objects.types.natives.primitive.RPCByte;
 import dev.watchwolf.rpc.definitions.Content;
 import dev.watchwolf.rpc.definitions.Event;
@@ -113,8 +116,7 @@ public class RPCComponentsCreator {
                 if (content.getType().startsWith("_")) continue; // internal use
 
                 Parameter param = new Parameter(TypeToRPCType.typeToName(TypeToRPCType.getType(content.getType())), content.getVariableName());
-                if (content.getDescription() != null)
-                    interfaceMethod.addCommentLine("@param " + content.getVariableName() + ": " + content.getDescription());
+                if (content.getDescription() != null) interfaceMethod.addCommentLine("@param " + content.getVariableName() + ": " + content.getDescription());
                 interfaceMethod.addParameter(param);
             }
 
@@ -125,12 +127,50 @@ public class RPCComponentsCreator {
     }
 
     private static Method []getClassPetitionMethod(List<Petition> petitions) {
-        Method []interfaceMethods = getInterfacePetitionMethods(petitions);
-        for (Method interfaceMethod : interfaceMethods) {
-            interfaceMethod.addModifier(Modifier.PUBLIC);
-            // TODO override modifier
+        Method []classMethods = new Method[petitions.size()];
+        for (int n = 0; n < petitions.size(); n++) {
+            Method classMethod = new Method(void.class, petitions.get(n).getFunctionName());
+            classMethod.addModifier(Modifier.PRIVATE);
+
+            // comments
+            classMethod.addCommentLine(petitions.get(n).getDescription());
+            StringBuilder sb = new StringBuilder();
+            for (Content content : petitions.get(n).getContents()) {
+                if (content.getType().startsWith("_")) continue; // internal use
+
+                sb.append("- ").append(content.getVariableName()).append((content.getDescription() != null) ? (": " + content.getDescription()) : "").append("\n");
+            }
+            if (sb.length() > 0) {
+                sb.insert(0, "This method will extract the following parameters for the `runner`:\n");
+                classMethod.addCommentLine(sb.toString());
+            }
+
+            // arguments
+            Parameter channelParam = new Parameter(MessageChannel.class.getName(), "channel"),
+                    converterParam = new Parameter(RPCConverter.class.getName() + "<?>", "converter");
+            classMethod.addParameter(channelParam);
+            classMethod.addParameter(converterParam);
+
+            // contents
+            StringBuilder params = new StringBuilder(); // params list to call the function
+            for (Content content : petitions.get(n).getContents()) {
+                if (content.getType().startsWith("_")) continue; // internal use
+
+                ClassType<?> nativeType = TypeToRPCType.getType(content.getType());
+                if (nativeType == null) throw new RuntimeException("Couldn't get the type of '" + content.getType() + "'");
+                ClassType<? extends RPCObject> rpcType = TypeToRPCType.getRPCType(nativeType);
+                String unmarshallClassParam = TypeToRPCType.typeToName(rpcType) + ".class";
+                if (rpcType instanceof TemplateClassType) unmarshallClassParam = ClassTypeFactory.class.getName() + ".getTemplateType(" + rpcType.getName() /* don't use `typeToName` here; we need the raw class */ + ".class, " + TypeToRPCType.typeToName(((TemplateClassType)rpcType).getSubtype()) + ".class)";
+                classMethod.addContent("\t" + TypeToRPCType.typeToName(nativeType) + " " + content.getVariableName() + " = converter.unmarshall(channel, " + unmarshallClassParam + ").getObject();");
+                params.append(content.getVariableName()).append(", ");
+            }
+            if (params.length() > 0) params.setLength(params.length()-2); // remove last ', '
+            classMethod.addContent("\tthis.runner." + petitions.get(n).getFunctionName() + "(" + params.toString() + ");");
+
+            classMethods[n] = classMethod;
         }
-        return interfaceMethods;
+
+        return classMethods;
     }
 
     private static void generateRPCEvent(Event event, String componentName, String stubsOutPackage, String stubsOutPath) {
@@ -264,7 +304,18 @@ public class RPCComponentsCreator {
                             .addParameter(new Parameter(short.class, "operation"))
                             .addParameter(new Parameter(MessageChannel.class.getName(), "channel"))
                             .addParameter(new Parameter(RPCConverter.class.getName() + "<?>", "converter"));
-        pLocalForwardMethod.addContent(""); // TODO
+        if (component.getName().equals("Servers Manager")) {
+            // legacy call
+            pLocalForwardMethod.addContent("\tif (origin == 1 /* WW server is the origin */ && isReturn && operation == 2 /* 'server started' return */) {")
+                                .addContent("\t\t// legacy call; read arguments and do nothing")
+                                .addContent("\t\tconverter.unmarshall(channel, " + RPCString.class.getName() + ".class);")
+                                .addContent("\t\treturn;")
+                                .addContent("\t}");
+        }
+        // exceptions
+        pLocalForwardMethod.addContent("\tif (origin != " + component.getDestinyId() + ") throw new " + RuntimeException.class.getName() + "(\"Got a request targeting a different component\");")
+                            .addContent("\tif (isReturn) throw new " + RuntimeException.class.getName() + "(\"Got a return instead of a request\");");
+        // TODO read requests
         localClass.addElement(pLocalForwardMethod);
 
         Method localForwardMethod = getForwardMethod(localClass);
@@ -280,7 +331,6 @@ public class RPCComponentsCreator {
 
         List<Method> throwableMethods = new ArrayList<>();
         for (Method petition : getClassPetitionMethod(component.getPetitions())) {
-            petition.addContent("");
             localClass.addElement(petition);
             throwableMethods.add(petition);
         }

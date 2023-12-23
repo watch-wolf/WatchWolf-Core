@@ -5,6 +5,7 @@ import dev.watchwolf.core.rpc.channel.ChannelQueue;
 import dev.watchwolf.core.rpc.channel.MessageChannel;
 import dev.watchwolf.core.rpc.objects.converter.class_type.ClassType;
 import dev.watchwolf.core.rpc.objects.converter.class_type.ClassTypeFactory;
+import dev.watchwolf.core.rpc.objects.converter.class_type.TemplateClassType;
 import dev.watchwolf.core.rpc.objects.types.RPCObject;
 
 import javax.naming.InsufficientResourcesException;
@@ -112,10 +113,15 @@ public class RPCConverter<T extends RPCObject> {
     }
 
     public ClassType<? extends RPCObject> getRPCWrapClass(ClassType<?> type) {
-        if (type.isAssignableFrom(RPCConverter.class)) return (ClassType<? extends RPCObject>)type; // already RPC; nothing to do
+        if (type.isAssignableFrom(RPCObject.class)) return (ClassType<? extends RPCObject>)type; // already RPC; nothing to do
 
         if (this.canLocallyWrap(type)) {
             if (this.locallyConverting == null) throw new IllegalArgumentException("Specified by arguments converting nothing, but found a match for type=" + type.getName());
+            if (type instanceof TemplateClassType && !(this.locallyConverting instanceof TemplateClassType)) {
+                // generic convert; set second element
+                ClassType<?> subtype = ((TemplateClassType<?,?>)type).getSubtype();
+                return ClassTypeFactory.getTemplateType(this.locallyConverting.getClassType(), this.getMasterConverter().getRPCWrapClass(subtype));
+            }
             return this.locallyConverting;
         }
 
@@ -150,7 +156,7 @@ public class RPCConverter<T extends RPCObject> {
         throw new UnsupportedOperationException("Undefined operation.");
     }
 
-    protected void setMasterConverter(RPCConverter<?> masterConverter) {
+    void setMasterConverter(RPCConverter<?> masterConverter) {
         this.masterConverter = masterConverter;
 
         for (RPCConverter<?> subconverter : this.subconverters) {
@@ -193,6 +199,10 @@ public class RPCConverter<T extends RPCObject> {
         this.subconverters.add(subconverter);
         subconverter.setMasterConverter(this.masterConverter); // we need to notify who's the boss
         return this;
+    }
+
+    protected List<RPCConverter<?>> getSubconverters() {
+        return this.subconverters;
     }
 
     public static byte []toByteArray(List<Byte> bytes) {
