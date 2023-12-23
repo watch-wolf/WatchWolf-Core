@@ -14,6 +14,7 @@ import dev.watchwolf.core.rpc.objects.types.RPCObject;
 import dev.watchwolf.core.rpc.objects.types.natives.primitive.RPCByte;
 import dev.watchwolf.rpc.definitions.Content;
 import dev.watchwolf.rpc.definitions.Event;
+import dev.watchwolf.rpc.definitions.Petition;
 import dev.watchwolf.rpc.definitions.WatchWolfComponent;
 
 import java.io.BufferedWriter;
@@ -26,7 +27,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class RPCComponentsCreator {
-    private static JavaClass getCommonClass(String pckge, String localName, String []localImplements, WatchWolfComponent component) {
+    private static JavaClass getCommonClass(String pckge, String localName, String []localImplements, String []runners, WatchWolfComponent component) {
         JavaClass clazz = new JavaClass(pckge, localName, "", localImplements);
 
         // info&warning
@@ -44,6 +45,7 @@ public class RPCComponentsCreator {
         // RPC node
         Field rpcNode = new Field(RPC.class.getName(), "rpc");
         rpcNode.addModifier(Modifier.PRIVATE);
+        rpcNode.addCommentLine("The RPC node will be the one that will run the events raised");
 
         Method setRPCMethod = new Method(void.class, "setHandler");
         setRPCMethod.addParameter(new Parameter(RPC.class.getName(), "handler"));
@@ -52,6 +54,20 @@ public class RPCComponentsCreator {
 
         clazz.addElement(setRPCMethod);
         clazz.addField(rpcNode);
+
+        // Runner node
+        Field runnerNode = new Field(runners[0], "runner");
+        runnerNode.addModifier(Modifier.PRIVATE);
+        runnerNode.addCommentLine("The runner will be the one that will run the petitions captured");
+
+        Method setRunnerMethod = new Method(void.class, "setRunner");
+        setRunnerMethod.addParameter(new Parameter(runners[0], "runner"));
+        setRunnerMethod.addModifier(Modifier.PUBLIC);
+        setRunnerMethod.addContent("\tthis.runner = runner;");
+
+        clazz.addElement(setRunnerMethod);
+        clazz.addField(runnerNode);
+
         return clazz;
     }
 
@@ -61,7 +77,7 @@ public class RPCComponentsCreator {
                                 .findFirst().orElse(null);
     }
 
-    private static Method getInterfaceMethod(Event event) {
+    private static Method getInterfaceEventMethod(Event event) {
         Method interfaceMethod = new Method(void.class, event.getFunctionName());
 
         interfaceMethod.addCommentLine(event.getDescription());
@@ -70,20 +86,51 @@ public class RPCComponentsCreator {
         for (Content content : event.getContents()) {
             if (content.getType().startsWith("_")) continue; // internal use
 
-            Parameter param = new Parameter(TypeToRPCType.typeToName(TypeToRPCType.getType(content.getType())), content.getName());
-            if (content.getDescription() != null) interfaceMethod.addCommentLine("@param " + content.getName() + ": " + content.getDescription());
+            Parameter param = new Parameter(TypeToRPCType.typeToName(TypeToRPCType.getType(content.getType())), content.getVariableName());
+            if (content.getDescription() != null) interfaceMethod.addCommentLine("@param " + content.getVariableName() + ": " + content.getDescription());
             interfaceMethod.addParameter(param);
         }
 
         return interfaceMethod;
     }
 
-    private static Method getInterfaceMethodForClass(Event event) {
-        Method interfaceMethod = getInterfaceMethod(event);
+    private static Method getClassEventMethod(Event event) {
+        Method interfaceMethod = getInterfaceEventMethod(event);
         interfaceMethod.addModifier(Modifier.PUBLIC);
         interfaceMethod.addCommentLine("Overrides method defined by interface `" + event.getClassName() + "`");
         // TODO override modifier
         return interfaceMethod;
+    }
+
+    private static Method []getInterfacePetitionMethods(List<Petition> petitions) {
+        Method []interfaceMethods = new Method[petitions.size()];
+        for (int n = 0; n < petitions.size(); n++) {
+            Method interfaceMethod = new Method(void.class, petitions.get(n).getFunctionName());
+
+            interfaceMethod.addCommentLine(petitions.get(n).getDescription());
+
+            for (Content content : petitions.get(n).getContents()) {
+                if (content.getType().startsWith("_")) continue; // internal use
+
+                Parameter param = new Parameter(TypeToRPCType.typeToName(TypeToRPCType.getType(content.getType())), content.getVariableName());
+                if (content.getDescription() != null)
+                    interfaceMethod.addCommentLine("@param " + content.getVariableName() + ": " + content.getDescription());
+                interfaceMethod.addParameter(param);
+            }
+
+            interfaceMethods[n] = interfaceMethod;
+        }
+
+        return interfaceMethods;
+    }
+
+    private static Method []getClassPetitionMethod(List<Petition> petitions) {
+        Method []interfaceMethods = getInterfacePetitionMethods(petitions);
+        for (Method interfaceMethod : interfaceMethods) {
+            interfaceMethod.addModifier(Modifier.PUBLIC);
+            // TODO override modifier
+        }
+        return interfaceMethods;
     }
 
     private static void generateRPCEvent(Event event, String componentName, String stubsOutPackage, String stubsOutPath) {
@@ -94,7 +141,7 @@ public class RPCComponentsCreator {
         clazz.addCommentLine("/!\\ Class generated automatically; do not modify. Please refer to dev.watchwolf.rpc.RPCComponentsCreator /!\\");
 
         // create & add method
-        Method interfaceMethod = getInterfaceMethod(event);
+        Method interfaceMethod = getInterfaceEventMethod(event);
         clazz.addElement(interfaceMethod);
 
         // write to file
@@ -142,7 +189,7 @@ public class RPCComponentsCreator {
         for (Content arg : arguments) {
             ClassType<? extends RPCObject> rpcArgType = TypeToRPCType.getRPCType(arg.getType());
             if (rpcArgType == null) throw new IllegalArgumentException("Couldn't parse " + arg.getType() + " into RPC!\n");
-            sb.append("\t\t\t\tnew " + rpcArgType.getClassType().getName() + "(" + arg.getName() + "),\n");
+            sb.append("\t\t\t\tnew " + TypeToRPCType.typeToName(rpcArgType) + "(" + arg.getName() + "),\n");
         }
 
         // done
@@ -152,20 +199,61 @@ public class RPCComponentsCreator {
         return sb.toString();
     }
 
+    private static void generateMethodsInterface(String componentName, List<Petition> petitions, String pckge, String name, String outPath) {
+        JavaClass clazz = new JavaClass(pckge, name);
+        clazz.addModifier(Modifier.PUBLIC);
+
+        clazz.addCommentLine("Petitions managed by " + componentName);
+        clazz.addCommentLine("/!\\ Class generated automatically; do not modify. Please refer to dev.watchwolf.rpc.RPCComponentsCreator /!\\");
+
+        // create & add method
+        Method []petitionMethods = getInterfacePetitionMethods(petitions);
+        for (Method petition : petitionMethods) clazz.addElement(petition);
+
+        // write to file
+        String localPath = outPath + "/" + name + ".java";
+        try (FileWriter writer = new FileWriter(localPath);
+             BufferedWriter bwr = new BufferedWriter(writer);) {
+            String contents = clazz.toString()
+                    .replaceAll("class " + name, "interface " + name);
+            // throws
+            for (Method petition : petitionMethods) {
+                Pattern p = Pattern.compile("(" + petition.getName() + "\\([^\\)]*\\))(;)");
+                Matcher m = p.matcher(contents);
+                if (m.find()) {
+                    contents = m.replaceAll("$1 throws java.io.IOException$2");
+                }
+            }
+
+            bwr.write(contents);
+        } catch (IOException ex) {
+            ex.printStackTrace();
+        }
+    }
+
     public static void generateRPCComponents(WatchWolfComponent component, String stubsOutPackage, String stubsOutPath, String subsystemOutPackage, String subsystemOutPath) {
-        //
+        // ----------------------
         // 1. Generate the events
-        //
+        // ----------------------
+
         for (Event e : component.getAsyncReturns()) generateRPCEvent(e, component.getName(), stubsOutPackage, stubsOutPath);
 
+        // ---------------------------------
+        // 2. Generate the methods interface
+        // ---------------------------------
+
+        String methodsInterfaceName = component.getName().replaceAll("\\s", "") + "Petitions";
+        generateMethodsInterface(component.getName(), component.getPetitions(), stubsOutPackage, methodsInterfaceName, stubsOutPath);
+
         // ---------------------
-        // 1. Get the local stub
+        // 3. Get the local stub
         // ---------------------
+
         String localName = component.getName().replaceAll("\\s", "") + "LocalStub";
         List<String> localImplements = new ArrayList<>();
         localImplements.add(RPCImplementer.class.getName());
         for (Event e : component.getAsyncReturns()) localImplements.add(stubsOutPackage + "." + e.getClassName()); // the LocalStub implements all events
-        JavaClass localClass = getCommonClass(stubsOutPackage, localName, localImplements.toArray(new String[0]), component);
+        JavaClass localClass = getCommonClass(stubsOutPackage, localName, localImplements.toArray(new String[0]), new String[]{stubsOutPackage + "." + methodsInterfaceName}, component);
         localClass.addModifier(Modifier.PUBLIC);
 
         Method pLocalForwardMethod = new Method(void.class, "forwardCall");
@@ -190,28 +278,27 @@ public class RPCComponentsCreator {
                         .addContent("\t\tthis.forwardCall(origin, isReturn, operation, channel, converter);")
                         .addContent("\t}");
 
-        List<Method> eventMethods = new ArrayList<>();
-        for (Event event : component.getAsyncReturns()) {
-            Method eventMethod = getInterfaceMethodForClass(event);
-            eventMethod.addContent(fillEventCall(component, event));
-            localClass.addElement(eventMethod);
-            eventMethods.add(eventMethod);
+        List<Method> throwableMethods = new ArrayList<>();
+        for (Method petition : getClassPetitionMethod(component.getPetitions())) {
+            petition.addContent("");
+            localClass.addElement(petition);
+            throwableMethods.add(petition);
         }
 
-        // ----------------------
-        // 2. Get the remote stub
-        // ----------------------
-        // TODO
+        for (Event event : component.getAsyncReturns()) {
+            Method eventMethod = getClassEventMethod(event);
+            eventMethod.addContent(fillEventCall(component, event));
+            localClass.addElement(eventMethod);
+            throwableMethods.add(eventMethod);
+        }
 
-        // ----------------
-        // 3. write to file
-        // ----------------
+        // write to file
         String localPath = stubsOutPath + "/" + localName + ".java";
         try (FileWriter writer = new FileWriter(localPath);
              BufferedWriter bwr = new BufferedWriter(writer);) {
             String classText = localClass.toString();
             // throws
-            for (Method eventMethod : eventMethods) {
+            for (Method eventMethod : throwableMethods) {
                 Pattern p = Pattern.compile("(" + eventMethod.getName() + "\\([^\\)]*\\))(\\s*\\{)");
                 Matcher m = p.matcher(classText);
                 if (m.find()) {
@@ -228,6 +315,11 @@ public class RPCComponentsCreator {
         } catch (IOException ex) {
             ex.printStackTrace();
         }
+
+        // ----------------------
+        // 4. Get the remote stub
+        // ----------------------
+        // TODO
     }
 
     public static void main(String[] args) throws Exception {

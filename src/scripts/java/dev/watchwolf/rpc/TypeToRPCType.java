@@ -51,7 +51,7 @@ public class TypeToRPCType {
             else {
                 // array
                 String nonArrayType = type.substring(0, type.length()-2);
-                Class<?> nonArrayClass = ClassTypeFactory.getType(classForSimpleName(nonArrayType)).getClass();
+                Class<?> nonArrayClass = ClassTypeFactory.getType(classForSimpleName(nonArrayType)).getClassType();
                 t = ClassTypeFactory.getTemplateType(Collection.class, nonArrayClass);
             }
 
@@ -63,8 +63,7 @@ public class TypeToRPCType {
     }
 
     public static String typeToName(ClassType<?> type) {
-        if (type instanceof ClassType) return type.getClassType().getName();
-        else if (type instanceof TemplateClassType) return type.getClassType().getName() + "<" + ((TemplateClassType)type).getSubtype().getClass().getName() + ">";
-        return "?";
+        if (type instanceof TemplateClassType) return type.getName() + "<" + ((TemplateClassType<?,?>)type).getSubtype().getName() + ">";
+        return type.getName();
     }
 }
