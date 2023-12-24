@@ -38,6 +38,18 @@ public class RPCArray extends NativeTypeRPCObject<Collection<? extends RPCObject
         return super.object.iterator();
     }
 
+    public <T> Collection<T> getObject(RPCConverter<?> masterConverter, ClassType<T> targetType) {
+        Collection<T> r = new ArrayList<>();
+        for (RPCObject e : this.getObject()) r.add(masterConverter.unwrap(e, targetType));
+        return r;
+    }
+
+    public <T> Collection<T> getObject(RPCConverter<?> masterConverter, Class<T> targetType) {
+        Collection<T> r = new ArrayList<>();
+        for (RPCObject e : this.getObject()) r.add(masterConverter.unwrap(e, targetType));
+        return r;
+    }
+
     public int size() {
         return super.object.size();
     }

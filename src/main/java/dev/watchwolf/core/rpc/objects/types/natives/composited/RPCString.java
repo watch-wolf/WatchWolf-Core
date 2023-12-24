@@ -49,10 +49,7 @@ public class RPCString extends NativeTypeRPCObject<String> {
 
             // convert to string
             final StringBuilder sb = new StringBuilder();
-            array.getIterator().forEachRemaining(e -> {
-                if (!(e instanceof RPCChar)) throw new RuntimeException("Expected elements to be char; found " + e.getClass() + " instead");
-                sb.append(((RPCChar)e).getObject());
-            });
+            array.getObject(this.getMasterConverter(), Character.class).iterator().forEachRemaining(sb::append);
 
             return new RPCString(sb.toString());
         }

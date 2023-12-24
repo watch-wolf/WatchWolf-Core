@@ -138,10 +138,11 @@ public class RPCComponentsCreator {
             for (Content content : petitions.get(n).getContents()) {
                 if (content.getType().startsWith("_")) continue; // internal use
 
-                sb.append("- ").append(content.getVariableName()).append((content.getDescription() != null) ? (": " + content.getDescription()) : "").append("\n");
+                sb.append("* - ").append(content.getVariableName()).append((content.getDescription() != null) ? (": " + content.getDescription()) : "").append("\n");
             }
             if (sb.length() > 0) {
                 sb.insert(0, "This method will extract the following parameters for the `runner`:\n");
+                sb.setLength(sb.length()-1); // remove last '\n'
                 classMethod.addCommentLine(sb.toString());
             }
 
@@ -159,9 +160,13 @@ public class RPCComponentsCreator {
                 ClassType<?> nativeType = TypeToRPCType.getType(content.getType());
                 if (nativeType == null) throw new RuntimeException("Couldn't get the type of '" + content.getType() + "'");
                 ClassType<? extends RPCObject> rpcType = TypeToRPCType.getRPCType(nativeType);
-                String unmarshallClassParam = TypeToRPCType.typeToName(rpcType) + ".class";
-                if (rpcType instanceof TemplateClassType) unmarshallClassParam = ClassTypeFactory.class.getName() + ".getTemplateType(" + rpcType.getName() /* don't use `typeToName` here; we need the raw class */ + ".class, " + TypeToRPCType.typeToName(((TemplateClassType)rpcType).getSubtype()) + ".class)";
-                classMethod.addContent("\t" + TypeToRPCType.typeToName(nativeType) + " " + content.getVariableName() + " = converter.unmarshall(channel, " + unmarshallClassParam + ").getObject();");
+                String unmarshallClassParam = TypeToRPCType.typeToName(rpcType) + ".class",
+                        getObjectCall = ".getObject()";
+                if (rpcType instanceof TemplateClassType) {
+                    unmarshallClassParam = ClassTypeFactory.class.getName() + ".getTemplateType(" + rpcType.getName() /* don't use `typeToName` here; we need the raw class */ + ".class, " + TypeToRPCType.typeToName(((TemplateClassType)rpcType).getSubtype()) + ".class)";
+                    getObjectCall = "\n\t\t\t\t\t.getObject(converter, " + ((TemplateClassType)nativeType).getSubtype().getName() + ".class)";
+                }
+                classMethod.addContent("\t" + TypeToRPCType.typeToName(nativeType) + " " + content.getVariableName() + " = converter.unmarshall(channel, " + unmarshallClassParam + ")" + getObjectCall + ";");
                 params.append(content.getVariableName()).append(", ");
             }
             if (params.length() > 0) params.setLength(params.length()-2); // remove last ', '
@@ -313,9 +318,26 @@ public class RPCComponentsCreator {
                                 .addContent("\t}");
         }
         // exceptions
-        pLocalForwardMethod.addContent("\tif (origin != " + component.getDestinyId() + ") throw new " + RuntimeException.class.getName() + "(\"Got a request targeting a different component\");")
-                            .addContent("\tif (isReturn) throw new " + RuntimeException.class.getName() + "(\"Got a return instead of a request\");");
-        // TODO read requests
+        pLocalForwardMethod.addContent("")
+                            .addContent("\t// arg guards")
+                            .addContent("\tif (origin != " + component.getDestinyId() + ") throw new " + RuntimeException.class.getName() + "(\"Got a request targeting a different component\");")
+                            .addContent("\tif (isReturn) throw new " + RuntimeException.class.getName() + "(\"Got a return instead of a request\");")
+                            .addContent("\n\t// operation calls");
+        boolean firstIf = true;
+        for (Petition petition : component.getPetitions()) {
+            String msg = "\t";
+            if (firstIf) firstIf = false;
+            else msg += "else ";
+
+            Content operationNumber = petition.getContents().get(0);
+            if (!operationNumber.getType().equals("_operation")) throw new RuntimeException("Expected 'operation' type in first content");
+            msg += "if (operation == " + ((Number)operationNumber.getValue()).intValue() + ") " + petition.getFunctionName() + "(channel, converter);";
+            pLocalForwardMethod.addContent(msg);
+        }
+        String msg = "\t";
+        if (!firstIf) msg += "else ";
+        msg += "throw new " + UnsupportedOperationException.class.getName() + "(\"Got unsupported operation: \" + operation); // no match";
+        pLocalForwardMethod.addContent(msg);
         localClass.addElement(pLocalForwardMethod);
 
         Method localForwardMethod = getForwardMethod(localClass);
