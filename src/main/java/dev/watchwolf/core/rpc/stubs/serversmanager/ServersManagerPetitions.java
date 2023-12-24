@@ -18,9 +18,10 @@ Once a 'start server' request is received the program should create a server wit
 * @param serverType: Type of server to start.
 * @param serverVersion: Server version to start.
 * @param plugins: Plugins to add to the server.
+* @param worldType: Defines if the world needs to be a regular one, or superflat.
 * @param maps: Maps to load to the server.
 * @param configFiles: Additional server config files.
 */
-void startServer(java.lang.String serverType, java.lang.String serverVersion, java.util.Collection<dev.watchwolf.core.entities.files.plugins.Plugin> plugins, java.util.Collection<dev.watchwolf.core.entities.files.ConfigFile> maps, java.util.Collection<dev.watchwolf.core.entities.files.ConfigFile> configFiles) throws java.io.IOException;
+void startServer(java.lang.String serverType, java.lang.String serverVersion, java.util.Collection<dev.watchwolf.core.entities.files.plugins.Plugin> plugins, dev.watchwolf.core.entities.WorldType worldType, java.util.Collection<dev.watchwolf.core.entities.files.ConfigFile> maps, java.util.Collection<dev.watchwolf.core.entities.files.ConfigFile> configFiles) throws java.io.IOException;
 
 }

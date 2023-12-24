@@ -1,5 +1,6 @@
 package dev.watchwolf.rpc;
 
+import dev.watchwolf.core.entities.WorldType;
 import dev.watchwolf.core.entities.files.ConfigFile;
 import dev.watchwolf.core.entities.files.plugins.Plugin;
 import dev.watchwolf.core.rpc.objects.converter.RPCConverter;
@@ -26,7 +27,7 @@ public class TypeToRPCType {
 
     private static Class<?> classForSimpleName(String name) {
         Class<?> []classes = {
-                String.class, Plugin.class, ConfigFile.class
+                String.class, Plugin.class, ConfigFile.class, WorldType.class
         };
         Map<String,Class<?>> extraAliases = new HashMap<>();
         extraAliases.put("Map", ConfigFile.class);

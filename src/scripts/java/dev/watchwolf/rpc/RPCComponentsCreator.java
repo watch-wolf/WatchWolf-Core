@@ -13,6 +13,7 @@ import dev.watchwolf.core.rpc.objects.converter.class_type.ClassType;
 import dev.watchwolf.core.rpc.objects.converter.class_type.ClassTypeFactory;
 import dev.watchwolf.core.rpc.objects.converter.class_type.TemplateClassType;
 import dev.watchwolf.core.rpc.objects.types.RPCObject;
+import dev.watchwolf.core.rpc.objects.types.natives.composited.RPCEnum;
 import dev.watchwolf.core.rpc.objects.types.natives.composited.RPCString;
 import dev.watchwolf.core.rpc.objects.types.natives.primitive.RPCByte;
 import dev.watchwolf.rpc.definitions.Content;
@@ -158,15 +159,20 @@ public class RPCComponentsCreator {
                 if (content.getType().startsWith("_")) continue; // internal use
 
                 ClassType<?> nativeType = TypeToRPCType.getType(content.getType());
-                if (nativeType == null) throw new RuntimeException("Couldn't get the type of '" + content.getType() + "'");
                 ClassType<? extends RPCObject> rpcType = TypeToRPCType.getRPCType(nativeType);
+                if (nativeType == null || rpcType == null) throw new RuntimeException("Couldn't get the type of '" + content.getType() + "'");
                 String unmarshallClassParam = TypeToRPCType.typeToName(rpcType) + ".class",
                         getObjectCall = ".getObject()";
+                boolean forceCast = false;
                 if (rpcType instanceof TemplateClassType) {
                     unmarshallClassParam = ClassTypeFactory.class.getName() + ".getTemplateType(" + rpcType.getName() /* don't use `typeToName` here; we need the raw class */ + ".class, " + TypeToRPCType.typeToName(((TemplateClassType)rpcType).getSubtype()) + ".class)";
                     getObjectCall = "\n\t\t\t\t\t.getObject(converter, " + ((TemplateClassType)nativeType).getSubtype().getName() + ".class)";
                 }
-                classMethod.addContent("\t" + TypeToRPCType.typeToName(nativeType) + " " + content.getVariableName() + " = converter.unmarshall(channel, " + unmarshallClassParam + ")" + getObjectCall + ";");
+                if (rpcType.getClassType().isAssignableFrom(RPCEnum.class)) {
+                    getObjectCall = "\n\t\t\t\t\t.getObject(" + TypeToRPCType.typeToName(nativeType) + ".class)";
+                    forceCast = true;
+                }
+                classMethod.addContent("\t" + TypeToRPCType.typeToName(nativeType) + " " + content.getVariableName() + " = " + (forceCast ? ("(" + TypeToRPCType.typeToName(nativeType) + ")") : "") + "converter.unmarshall(channel, " + unmarshallClassParam + ")" + getObjectCall + ";");
                 params.append(content.getVariableName()).append(", ");
             }
             if (params.length() > 0) params.setLength(params.length()-2); // remove last ', '
@@ -220,7 +226,7 @@ public class RPCComponentsCreator {
                             | ((((Number)operation.getValue()).intValue() & 0b1111) << 4),
             header_msb = ((Number)operation.getValue()).intValue() >> 4;
 
-        sb.append("\tif (this.rpc == null) throw new ").append(RuntimeException.class.getName()).append("(\"Send event call before RPC instance\");\n")
+        sb.append("\tif (this.rpc == null) throw new ").append(RuntimeException.class.getName()).append("(\"Got 'send event' call before RPC instance\");\n")
             .append("\tsynchronized (this) {\n")
             .append("\t\tthis.rpc.sendEvent(\n");
         // header

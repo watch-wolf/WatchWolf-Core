@@ -15,7 +15,7 @@ import java.util.List;
 
 public class DefinitionDataFactory {
     private static final String []LATEST_DEFINITIONS_LIST = {
-            "https://raw.githubusercontent.com/watch-wolf/WatchWolf/b0a1350ae9debbbb60ba43b734b2c095729523d7/API/definitions/servers_manager.json"
+            "https://raw.githubusercontent.com/watch-wolf/WatchWolf/076678d534f015515f8ee1367b854d9b97cd60f3/API/definitions/servers_manager.json"
     };
 
     public static List<WatchWolfComponent> get() throws IOException {
