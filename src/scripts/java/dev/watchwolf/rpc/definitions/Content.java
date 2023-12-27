@@ -46,4 +46,8 @@ public class Content {
     public Object getValue() {
         return this.value;
     }
+
+    public int getIntValue() {
+        return ((Number)this.getValue()).intValue();
+    }
 }

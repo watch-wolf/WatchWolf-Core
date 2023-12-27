@@ -21,7 +21,9 @@ Once a 'start server' request is received the program should create a server wit
 * @param worldType: Defines if the world needs to be a regular one, or superflat.
 * @param maps: Maps to load to the server.
 * @param configFiles: Additional server config files.
+* @return Started server IP and port.
+If it's not possible to create it (for example: one argument is invalid, the user sent a plugin when it's specified that only Usual Plugins are allowed, or there's no free servers of that type), then an empty string is returned.
 */
-void startServer(java.lang.String serverType, java.lang.String serverVersion, java.util.Collection<dev.watchwolf.core.entities.files.plugins.Plugin> plugins, dev.watchwolf.core.entities.WorldType worldType, java.util.Collection<dev.watchwolf.core.entities.files.ConfigFile> maps, java.util.Collection<dev.watchwolf.core.entities.files.ConfigFile> configFiles) throws java.io.IOException;
+java.lang.String startServer(java.lang.String serverType, java.lang.String serverVersion, java.util.Collection<dev.watchwolf.core.entities.files.plugins.Plugin> plugins, dev.watchwolf.core.entities.WorldType worldType, java.util.Collection<dev.watchwolf.core.entities.files.ConfigFile> maps, java.util.Collection<dev.watchwolf.core.entities.files.ConfigFile> configFiles) throws java.io.IOException;
 
 }

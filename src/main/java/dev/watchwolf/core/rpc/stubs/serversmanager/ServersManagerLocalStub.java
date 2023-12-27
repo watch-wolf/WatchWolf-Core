@@ -69,18 +69,26 @@ Once a 'start server' request is received the program should create a server wit
 * - worldType: Defines if the world needs to be a regular one, or superflat.
 * - maps: Maps to load to the server.
 * - configFiles: Additional server config files.
+* This method will return: IP - Started server IP and port.
+If it's not possible to create it (for example: one argument is invalid, the user sent a plugin when it's specified that only Usual Plugins are allowed, or there's no free servers of that type), then an empty string is returned.
 */
 private void startServer(dev.watchwolf.core.rpc.channel.MessageChannel channel, dev.watchwolf.core.rpc.objects.converter.RPCConverter<?> converter) throws java.io.IOException {
 	java.lang.String serverType = converter.unmarshall(channel, dev.watchwolf.core.rpc.objects.types.natives.composited.RPCString.class).getObject();
 	java.lang.String serverVersion = converter.unmarshall(channel, dev.watchwolf.core.rpc.objects.types.natives.composited.RPCString.class).getObject();
 	java.util.Collection<dev.watchwolf.core.entities.files.plugins.Plugin> plugins = converter.unmarshall(channel, dev.watchwolf.core.rpc.objects.converter.class_type.ClassTypeFactory.getTemplateType(dev.watchwolf.core.rpc.objects.types.natives.composited.RPCArray.class, dev.watchwolf.core.rpc.objects.types.custom.files.plugins.RPCPlugin.class))
 					.getObject(converter, dev.watchwolf.core.entities.files.plugins.Plugin.class);
-	dev.watchwolf.core.entities.WorldType worldType = (dev.watchwolf.core.entities.WorldType)converter.unmarshall(channel, dev.watchwolf.core.rpc.objects.types.natives.composited.RPCEnum.class).getObject(dev.watchwolf.core.entities.WorldType.class);
+	dev.watchwolf.core.entities.WorldType worldType = (dev.watchwolf.core.entities.WorldType)converter.unmarshall(channel, dev.watchwolf.core.rpc.objects.types.natives.composited.RPCEnum.class)
+					.getObject(dev.watchwolf.core.entities.WorldType.class);
 	java.util.Collection<dev.watchwolf.core.entities.files.ConfigFile> maps = converter.unmarshall(channel, dev.watchwolf.core.rpc.objects.converter.class_type.ClassTypeFactory.getTemplateType(dev.watchwolf.core.rpc.objects.types.natives.composited.RPCArray.class, dev.watchwolf.core.rpc.objects.types.custom.files.RPCConfigFile.class))
 					.getObject(converter, dev.watchwolf.core.entities.files.ConfigFile.class);
 	java.util.Collection<dev.watchwolf.core.entities.files.ConfigFile> configFiles = converter.unmarshall(channel, dev.watchwolf.core.rpc.objects.converter.class_type.ClassTypeFactory.getTemplateType(dev.watchwolf.core.rpc.objects.types.natives.composited.RPCArray.class, dev.watchwolf.core.rpc.objects.types.custom.files.RPCConfigFile.class))
 					.getObject(converter, dev.watchwolf.core.entities.files.ConfigFile.class);
-	this.runner.startServer(serverType, serverVersion, plugins, worldType, maps, configFiles);
+
+	java.lang.String ip = this.runner.startServer(serverType, serverVersion, plugins, worldType, maps, configFiles);
+
+	new dev.watchwolf.core.rpc.objects.types.natives.primitive.RPCByte((byte) 0b0001_0_000).send(channel);
+	new dev.watchwolf.core.rpc.objects.types.natives.primitive.RPCByte((byte) 0b00000000).send(channel);
+	new dev.watchwolf.core.rpc.objects.types.natives.composited.RPCString(ip).send(channel);
 }
 
 /**
@@ -89,7 +97,7 @@ private void startServer(dev.watchwolf.core.rpc.channel.MessageChannel channel, 
 * Overrides method defined by interface `ServerStartedEvent`
 */
 public void serverStarted() throws java.io.IOException {
-	if (this.rpc == null) throw new java.lang.RuntimeException("Send event call before RPC instance");
+	if (this.rpc == null) throw new java.lang.RuntimeException("Got 'send event' call before RPC instance");
 	synchronized (this) {
 		this.rpc.sendEvent(
 				new dev.watchwolf.core.rpc.objects.types.natives.primitive.RPCByte((byte) 0b0010_1_000),
@@ -104,7 +112,7 @@ public void serverStarted() throws java.io.IOException {
 * Overrides method defined by interface `CapturedExceptionEvent`
 */
 public void capturedException(java.lang.String exception) throws java.io.IOException {
-	if (this.rpc == null) throw new java.lang.RuntimeException("Send event call before RPC instance");
+	if (this.rpc == null) throw new java.lang.RuntimeException("Got 'send event' call before RPC instance");
 	synchronized (this) {
 		this.rpc.sendEvent(
 				new dev.watchwolf.core.rpc.objects.types.natives.primitive.RPCByte((byte) 0b0011_1_000),

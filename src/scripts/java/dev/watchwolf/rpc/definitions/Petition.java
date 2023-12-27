@@ -33,4 +33,9 @@ public class Petition {
     public Petition getReturns() {
         return this.returns;
     }
+
+    public int getOperationId() {
+        if (this.getContents().isEmpty() || !this.getContents().get(0).getType().equals("_operation")) throw new IllegalArgumentException("Expected 'operation' type on first content");
+        return this.getContents().get(0).getIntValue();
+    }
 }

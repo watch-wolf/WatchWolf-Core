@@ -109,7 +109,8 @@ public class RPCComponentsCreator {
     private static Method []getInterfacePetitionMethods(List<Petition> petitions) {
         Method []interfaceMethods = new Method[petitions.size()];
         for (int n = 0; n < petitions.size(); n++) {
-            Method interfaceMethod = new Method(void.class, petitions.get(n).getFunctionName());
+            Content returnType = (petitions.get(n).getReturns() == null || petitions.get(n).getReturns().getContents().isEmpty()) ? null : petitions.get(n).getReturns().getContents().get(0);
+            Method interfaceMethod = new Method(returnType == null ? "void" : TypeToRPCType.typeToName(TypeToRPCType.getType(returnType.getType())), petitions.get(n).getFunctionName());
 
             interfaceMethod.addCommentLine(petitions.get(n).getDescription());
 
@@ -120,6 +121,7 @@ public class RPCComponentsCreator {
                 if (content.getDescription() != null) interfaceMethod.addCommentLine("@param " + content.getVariableName() + ": " + content.getDescription());
                 interfaceMethod.addParameter(param);
             }
+            if (returnType != null) interfaceMethod.addCommentLine("@return " + returnType.getDescription());
 
             interfaceMethods[n] = interfaceMethod;
         }
@@ -127,9 +129,10 @@ public class RPCComponentsCreator {
         return interfaceMethods;
     }
 
-    private static Method []getClassPetitionMethod(List<Petition> petitions) {
+    private static Method []getClassPetitionMethod(int destiny, List<Petition> petitions) {
         Method []classMethods = new Method[petitions.size()];
         for (int n = 0; n < petitions.size(); n++) {
+            Content returnType = (petitions.get(n).getReturns() == null || petitions.get(n).getReturns().getContents().isEmpty()) ? null : petitions.get(n).getReturns().getContents().get(0);
             Method classMethod = new Method(void.class, petitions.get(n).getFunctionName());
             classMethod.addModifier(Modifier.PRIVATE);
 
@@ -146,6 +149,7 @@ public class RPCComponentsCreator {
                 sb.setLength(sb.length()-1); // remove last '\n'
                 classMethod.addCommentLine(sb.toString());
             }
+            if (returnType != null) classMethod.addCommentLine("This method will return: " + returnType.getName() + " - " + returnType.getDescription());
 
             // arguments
             Parameter channelParam = new Parameter(MessageChannel.class.getName(), "channel"),
@@ -175,8 +179,23 @@ public class RPCComponentsCreator {
                 classMethod.addContent("\t" + TypeToRPCType.typeToName(nativeType) + " " + content.getVariableName() + " = " + (forceCast ? ("(" + TypeToRPCType.typeToName(nativeType) + ")") : "") + "converter.unmarshall(channel, " + unmarshallClassParam + ")" + getObjectCall + ";");
                 params.append(content.getVariableName()).append(", ");
             }
-            if (params.length() > 0) params.setLength(params.length()-2); // remove last ', '
-            classMethod.addContent("\tthis.runner." + petitions.get(n).getFunctionName() + "(" + params.toString() + ");");
+            if (params.length() > 0) {
+                params.setLength(params.length()-2); // remove last ', '
+                classMethod.addContent(""); // leave some space
+            }
+            String varAssignation = (returnType == null) ? "" : (TypeToRPCType.typeToName(TypeToRPCType.getType(returnType.getType())) + " " + returnType.getVariableName() + " = ");
+            classMethod.addContent("\t" + varAssignation + "this.runner." + petitions.get(n).getFunctionName() + "(" + params.toString() + ");");
+
+            if (returnType != null) {
+                // header
+                classMethod.addContent("\n\tnew " + RPCByte.class.getName() + "(" + getLSBOperationByte(destiny, false, petitions.get(n).getOperationId()) + ").send(channel);");
+                classMethod.addContent("\tnew " + RPCByte.class.getName() + "(" + getMSBOperationByte(petitions.get(n).getOperationId()) + ").send(channel);");
+
+                // arguments
+                ClassType<? extends RPCObject> rpcArgType = TypeToRPCType.getRPCType(returnType.getType());
+                if (rpcArgType == null) throw new IllegalArgumentException("Couldn't parse " + returnType.getType() + " into RPC!\n");
+                classMethod.addContent("\tnew " + TypeToRPCType.typeToName(rpcArgType) + "(" + returnType.getVariableName() + ").send(channel);");
+            }
 
             classMethods[n] = classMethod;
         }
@@ -214,6 +233,25 @@ public class RPCComponentsCreator {
         }
     }
 
+    private static String getLSBOperationByte(int destiny, boolean isReturn, int operation) {
+        int header_lsb = destiny | (isReturn ? 0b0000_1_000 : 0)
+                | ((operation & 0b1111) << 4);
+
+        String header_lsb_str = Integer.toBinaryString(header_lsb);
+        while (header_lsb_str.length() < 8) header_lsb_str = "0" + header_lsb_str;
+
+        return "(byte) 0b" + header_lsb_str.substring(0, 4) + "_" + header_lsb_str.charAt(4) + "_" + header_lsb_str.substring(5, 8);
+    }
+
+    private static String getMSBOperationByte(int operation) {
+        int header_msb = operation >> 4;
+
+        String header_msb_str = Integer.toBinaryString(header_msb);
+        while (header_msb_str.length() < 8) header_msb_str = "0" + header_msb_str;
+
+        return "(byte) 0b" + header_msb_str;
+    }
+
     private static String fillEventCall(WatchWolfComponent component, Event event) {
         StringBuilder sb = new StringBuilder();
 
@@ -230,12 +268,8 @@ public class RPCComponentsCreator {
             .append("\tsynchronized (this) {\n")
             .append("\t\tthis.rpc.sendEvent(\n");
         // header
-        String header_lsb_str = Integer.toBinaryString(header_lsb);
-        while (header_lsb_str.length() < 8) header_lsb_str = "0" + header_lsb_str;
-        sb.append("\t\t\t\tnew " + RPCByte.class.getName() + "((byte) 0b" + header_lsb_str.substring(0, 4) + "_" + header_lsb_str.charAt(4) + "_" + header_lsb_str.substring(5, 8) + "),\n");
-        String header_msb_str = Integer.toBinaryString(header_msb);
-        while (header_msb_str.length() < 8) header_msb_str = "0" + header_msb_str;
-        sb.append("\t\t\t\tnew " + RPCByte.class.getName() + "((byte) 0b" + header_msb_str + "),\n");
+        sb.append("\t\t\t\tnew " + RPCByte.class.getName() + "(" + getLSBOperationByte(component.getDestinyId(), true, operation.getIntValue()) + "),\n");
+        sb.append("\t\t\t\tnew " + RPCByte.class.getName() + "(" + getMSBOperationByte(operation.getIntValue()) + "),\n");
         // arguments
         for (Content arg : arguments) {
             ClassType<? extends RPCObject> rpcArgType = TypeToRPCType.getRPCType(arg.getType());
@@ -358,7 +392,7 @@ public class RPCComponentsCreator {
                         .addContent("\t}");
 
         List<Method> throwableMethods = new ArrayList<>();
-        for (Method petition : getClassPetitionMethod(component.getPetitions())) {
+        for (Method petition : getClassPetitionMethod(component.getDestinyId(), component.getPetitions())) {
             localClass.addElement(petition);
             throwableMethods.add(petition);
         }
