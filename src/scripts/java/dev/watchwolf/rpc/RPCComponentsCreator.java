@@ -188,7 +188,7 @@ public class RPCComponentsCreator {
 
             if (returnType != null) {
                 // header
-                classMethod.addContent("\n\tnew " + RPCByte.class.getName() + "(" + getLSBOperationByte(destiny, false, petitions.get(n).getOperationId()) + ").send(channel);");
+                classMethod.addContent("\n\tnew " + RPCByte.class.getName() + "(" + getLSBOperationByte(destiny, true, petitions.get(n).getOperationId()) + ").send(channel);");
                 classMethod.addContent("\tnew " + RPCByte.class.getName() + "(" + getMSBOperationByte(petitions.get(n).getOperationId()) + ").send(channel);");
 
                 // arguments

@@ -9,9 +9,9 @@ import java.io.IOException;
 public class RPC implements Runnable {
     private final RPCImplementer localImplementation;
     private final MessageChannel remoteConnection;
-    private final RPCConverter converter;
+    private final RPCConverter<?> converter;
 
-    public RPC(RPCImplementer localImplementation, MessageChannel remoteConnection, RPCConverter converter) {
+    public RPC(RPCImplementer localImplementation, MessageChannel remoteConnection, RPCConverter<?> converter) {
         this.localImplementation = localImplementation;
         this.remoteConnection = remoteConnection;
         this.converter = converter;
