@@ -1,6 +1,7 @@
 package dev.watchwolf.core.rpc.objects.types.custom.files;
 
 import dev.watchwolf.core.entities.files.ConfigFile;
+import dev.watchwolf.core.entities.files.ZipFile;
 import dev.watchwolf.core.rpc.channel.MessageChannel;
 import dev.watchwolf.core.rpc.objects.converter.MainSubconverter;
 import dev.watchwolf.core.rpc.objects.converter.RPCConverter;
@@ -68,12 +69,14 @@ public class RPCConfigFile extends RPCObjectWrapper<ConfigFile> {
             for (int n = 0; n < length; n++) file[n] = (byte)this.getMasterConverter().unmarshall(channel, RPCByte.class).getUnsignedObject();
 
             ConfigFile object = new ConfigFile(nameAndExtension.getObject(), file, offsetPath.getObject());
+            if (object.getExtension().equals("zip")) object = new ZipFile(nameAndExtension.getObject(), file, offsetPath.getObject()); // we can store it as a zip
             return new RPCConfigFile(object);
         }
 
         @Override
         protected boolean canLocallyWrap(ClassType<?> objectType) {
-            return (objectType.equals(ClassTypeFactory.getType(ConfigFile.class)));
+            return (objectType.equals(ClassTypeFactory.getType(ConfigFile.class))
+                    || objectType.equals(ClassTypeFactory.getType(ZipFile.class)));
         }
     }
 }

@@ -3,7 +3,7 @@ package dev.watchwolf.core.entities.files;
 import java.io.File;
 import java.io.IOException;
 
-public class WorldFile extends ConfigFile {
+public class WorldFile extends ZipFile {
     public WorldFile(String name, File f) throws IOException {
         super(name + ".zip", f, name + "/");
     }
