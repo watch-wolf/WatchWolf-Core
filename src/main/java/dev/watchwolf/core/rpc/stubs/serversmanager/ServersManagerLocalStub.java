@@ -86,7 +86,7 @@ private void startServer(dev.watchwolf.core.rpc.channel.MessageChannel channel, 
 
 	java.lang.String ip = this.runner.startServer(serverType, serverVersion, plugins, worldType, maps, configFiles);
 
-	new dev.watchwolf.core.rpc.objects.types.natives.primitive.RPCByte((byte) 0b0001_0_000).send(channel);
+	new dev.watchwolf.core.rpc.objects.types.natives.primitive.RPCByte((byte) 0b0001_1_000).send(channel);
 	new dev.watchwolf.core.rpc.objects.types.natives.primitive.RPCByte((byte) 0b00000000).send(channel);
 	new dev.watchwolf.core.rpc.objects.types.natives.composited.RPCString(ip).send(channel);
 }
