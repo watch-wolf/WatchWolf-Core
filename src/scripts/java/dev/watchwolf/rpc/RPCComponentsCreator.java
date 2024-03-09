@@ -349,6 +349,7 @@ public class RPCComponentsCreator {
                             .addParameter(new Parameter(short.class, "operation"))
                             .addParameter(new Parameter(MessageChannel.class.getName(), "channel"))
                             .addParameter(new Parameter(RPCConverter.class.getName() + "<?>", "converter"));
+
         if (component.getName().equals("Servers Manager")) {
             // legacy call
             pLocalForwardMethod.addContent("\tif (origin == 1 /* WW server is the origin */ && isReturn && operation == 2 /* 'server started' return */) {")
@@ -357,12 +358,34 @@ public class RPCComponentsCreator {
                                 .addContent("\t\treturn;")
                                 .addContent("\t}");
         }
+
         // exceptions
         pLocalForwardMethod.addContent("")
                             .addContent("\t// arg guards")
                             .addContent("\tif (origin != " + component.getDestinyId() + ") throw new " + RuntimeException.class.getName() + "(\"Got a request targeting a different component\");")
-                            .addContent("\tif (isReturn) throw new " + RuntimeException.class.getName() + "(\"Got a return instead of a request\");")
-                            .addContent("\n\t// operation calls");
+                            .addContent("\tif (isReturn) throw new " + RuntimeException.class.getName() + "(\"Got a return instead of a request\");");
+
+        // ServersManager needs the source IP to reply
+        if (component.getName().equals("Servers Manager")) {
+            // add the variable
+            Field latestMessageChannelPetitionNode = new Field(MessageChannel.class.getName(), "latestMessageChannelPetition");
+            latestMessageChannelPetitionNode.addModifier(Modifier.PRIVATE);
+            latestMessageChannelPetitionNode.addCommentLine("Latest MessageChannel petition got");
+            localClass.addField(latestMessageChannelPetitionNode);
+
+            // save the variable
+            pLocalForwardMethod.addContent("\n\tthis." + latestMessageChannelPetitionNode.getName() + " = channel;");
+
+            // get the variable method
+            Method getLatestMessageChannelPetitionNodeMethod = new Method(MessageChannel.class.getName(), "getLatestMessageChannelPetitionNode");
+            getLatestMessageChannelPetitionNodeMethod.addModifier(Modifier.PUBLIC);
+            getLatestMessageChannelPetitionNodeMethod.addModifier(Modifier.SYNCHRONIZED);
+            getLatestMessageChannelPetitionNodeMethod.addContent("\treturn this." + latestMessageChannelPetitionNode.getName() + ";");
+            localClass.addElement(getLatestMessageChannelPetitionNodeMethod);
+        }
+
+        // operations
+        pLocalForwardMethod.addContent("\n\t// operation calls");
         boolean firstIf = true;
         for (Petition petition : component.getPetitions()) {
             String msg = "\t";

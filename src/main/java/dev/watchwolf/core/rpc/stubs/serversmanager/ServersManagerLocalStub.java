@@ -16,6 +16,10 @@ private dev.watchwolf.core.rpc.RPC rpc;
 * The runner will be the one that will run the petitions captured
 */
 private dev.watchwolf.core.rpc.stubs.serversmanager.ServersManagerPetitions runner;
+/**
+* Latest MessageChannel petition got
+*/
+private dev.watchwolf.core.rpc.channel.MessageChannel latestMessageChannelPetition;
 
 public void forwardCall(dev.watchwolf.core.rpc.channel.MessageChannel channel, dev.watchwolf.core.rpc.objects.converter.RPCConverter<?> converter) throws java.io.IOException {
 	synchronized (this) {
@@ -35,6 +39,10 @@ public void setRunner(dev.watchwolf.core.rpc.stubs.serversmanager.ServersManager
 	this.runner = runner;
 }
 
+public synchronized dev.watchwolf.core.rpc.channel.MessageChannel getLatestMessageChannelPetitionNode() {
+	return this.latestMessageChannelPetition;
+}
+
 private void forwardCall(byte origin, boolean isReturn, short operation, dev.watchwolf.core.rpc.channel.MessageChannel channel, dev.watchwolf.core.rpc.objects.converter.RPCConverter<?> converter) throws java.io.IOException {
 	if (origin == 1 /* WW server is the origin */ && isReturn && operation == 2 /* 'server started' return */) {
 		// legacy call; read arguments and do nothing
@@ -45,6 +53,8 @@ private void forwardCall(byte origin, boolean isReturn, short operation, dev.wat
 	// arg guards
 	if (origin != 0) throw new java.lang.RuntimeException("Got a request targeting a different component");
 	if (isReturn) throw new java.lang.RuntimeException("Got a return instead of a request");
+
+	this.latestMessageChannelPetition = channel;
 
 	// operation calls
 	if (operation == 0) nop(channel, converter);
