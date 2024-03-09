@@ -14,6 +14,14 @@ public abstract class SocketMessageChannel implements MessageChannel {
         this.port = port;
     }
 
+    public String getHost() {
+        return this.host;
+    }
+
+    public int getPort() {
+        return this.port;
+    }
+
     @Override
     public abstract void send(byte[] data) throws IOException;
 
