@@ -14,9 +14,10 @@ import java.util.concurrent.TimeoutException;
 public class ClientSocketMessageChannel extends SocketMessageChannel {
     /**
      * Max bytes that can be sent to a socket.
+     * It is 65536, but I can only get 65482 (maybe because of the header?), so we won't send more than that amount.
      * For more information check <a href="https://www.ibm.com/docs/en/ztpf/2020?topic=apis-send-send-data-connected-socket">IBM - Send data on a connected socket</a>.
      */
-    public static final int MAX_SOCKET_MESSAGE_LENGTH = 65536;
+    public static final int MAX_SOCKET_MESSAGE_LENGTH = 65482;
 
     private Socket socket;
 

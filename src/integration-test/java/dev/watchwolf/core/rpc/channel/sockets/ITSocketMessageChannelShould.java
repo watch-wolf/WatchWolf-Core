@@ -79,7 +79,7 @@ public class ITSocketMessageChannelShould {
             client.send(toSend);
 
             byte[] got = server.get(toSend.length, 5000);
-            assertEquals(toSend.length, got.length, "Different length got");
+            assertEquals(toSend.length, got.length, "Different length got. Sent: " + Arrays.toString(toSend) + " (" + toSend.length + " bits); got: " + Arrays.toString(got) + " (" + got.length + " bits)");
 
             assertTrue(Arrays.equals(toSend, got), "Got different between sent and got. Sent: " + Arrays.toString(toSend) + "; got: " + Arrays.toString(got));
         } catch (Exception ex) {
