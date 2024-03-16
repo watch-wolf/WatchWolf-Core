@@ -47,4 +47,9 @@ public class ChannelEmu implements MessageChannel {
     public void close() throws IOException {
         this.queue.close();
     }
+
+    @Override
+    public boolean isClosed() {
+        return this.queue.isClosed();
+    }
 }

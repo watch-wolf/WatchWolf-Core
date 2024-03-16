@@ -6,6 +6,11 @@ import dev.watchwolf.core.rpc.objects.converter.RPCObjectsConverterFactory;
 public class RPCFactory {
     public RPC build(RPCImplementerFactory localImplementationFactory, ChannelFactory remoteConnectionFactory) {
         RPCObjectsConverterFactory rpcObjectsConverterFactory = new RPCObjectsConverterFactory();
-        return new RPC(localImplementationFactory.build(), remoteConnectionFactory.build(), rpcObjectsConverterFactory.build());
+        RPCImplementer implementer = localImplementationFactory.build();
+
+        RPC built = new RPC(implementer, remoteConnectionFactory.build(), rpcObjectsConverterFactory.build());
+        implementer.setHandler(built); // to forward the events
+
+        return built;
     }
 }

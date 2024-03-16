@@ -62,4 +62,9 @@ public class ChannelQueue implements MessageChannel {
     public void close() throws IOException {
         this.channel.close();
     }
+
+    @Override
+    public boolean isClosed() {
+        return this.channel.isClosed();
+    }
 }

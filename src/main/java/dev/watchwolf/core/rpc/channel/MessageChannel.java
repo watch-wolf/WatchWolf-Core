@@ -25,5 +25,7 @@ public interface MessageChannel extends Closeable {
 
     MessageChannel create() throws IOException;
 
-    default void close() throws IOException {}
+    void close() throws IOException;
+
+    boolean isClosed();
 }

@@ -25,8 +25,15 @@ public class RPC implements Runnable {
 
     @Override
     public void run() {
-        this.localImplementation.setHandler(this);
+        while (!this.remoteConnection.isClosed()) {
+            try {
+                while (!this.remoteConnection.areBytesAvailable()) Thread.sleep(200); // TODO use notify
+                this.localImplementation.forwardCall(this.remoteConnection, this.converter);
+            } catch (IOException | InterruptedException ex) {
+                ex.printStackTrace();
+            }
+        }
 
-        // TODO read from `remoteConnection` and forward to RPCImplementer
+        System.out.println("RPC connection (" + localImplementation.getClass().getSimpleName() + " over " + this.remoteConnection.toString() + ") closed");
     }
 }
