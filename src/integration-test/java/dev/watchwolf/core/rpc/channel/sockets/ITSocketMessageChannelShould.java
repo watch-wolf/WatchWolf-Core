@@ -5,6 +5,7 @@ import dev.watchwolf.core.rpc.channel.sockets.client.ClientSocketChannelFactory;
 import dev.watchwolf.core.rpc.channel.sockets.server.ServerSocketChannelFactory;
 import dev.watchwolf.core.rpc.channel.sockets.server.ServerSocketMessageChannel;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import java.util.Arrays;
 import java.util.concurrent.TimeoutException;
@@ -12,7 +13,8 @@ import java.util.concurrent.TimeoutException;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-public class SocketMessageChannelShould {
+@Timeout(40)
+public class ITSocketMessageChannelShould {
     @Test
     public void sendAndReceiveData() throws Exception {
         String host = "127.0.0.1";

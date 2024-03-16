@@ -42,6 +42,14 @@
             <scope>test</scope>
         </dependency>
 
+        <!-- Mockito -->
+        <dependency>
+            <groupId>org.mockito</groupId>
+            <artifactId>mockito-core</artifactId>
+            <version>2.7.5</version>
+            <scope>test</scope>
+        </dependency>
+
         <!-- scripts dependencies -->
         <!-- TODO don't add always ; just compile when you want to run the scripts -->
 
@@ -81,13 +89,13 @@
         </pluginManagement>
 
         <plugins>
-            <!-- add scripts code -->
-            <!-- TODO don't add always ; just compile when you want to run the scripts -->
+            <!-- add scripts & integration tests code -->
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>build-helper-maven-plugin</artifactId>
                 <version>3.5.0</version>
                 <executions>
+                    <!-- TODO don't add always ; just compile when you want to run the scripts -->
                     <execution>
                         <id>add-source</id>
                         <phase>generate-sources</phase>
@@ -97,6 +105,19 @@
                         <configuration>
                             <sources>
                                 <source>${project.basedir}/src/scripts/java/</source>
+                            </sources>
+                        </configuration>
+                    </execution>
+
+                    <execution>
+                        <id>add-integration-test-sources</id>
+                        <phase>generate-test-sources</phase>
+                        <goals>
+                            <goal>add-test-source</goal>
+                        </goals>
+                        <configuration>
+                            <sources>
+                                <source>${project.basedir}/src/integration-test/java/</source>
                             </sources>
                         </configuration>
                     </execution>
@@ -119,6 +140,26 @@
                         <exclude>**/IT*.java</exclude>
                     </excludes>
                 </configuration>
+            </plugin>
+
+            <!-- Runs integration tests -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-failsafe-plugin</artifactId>
+                <version>3.2.5</version>
+                <executions>
+                    <execution>
+                        <id>integration-tests</id>
+                        <goals>
+                            <goal>integration-test</goal>
+                            <goal>verify</goal>
+                        </goals>
+                        <configuration>
+                            <skipTests>${skip.integration.tests}</skipTests>
+                            <redirectTestOutputToFile>true</redirectTestOutputToFile>
+                        </configuration>
+                    </execution>
+                </executions>
             </plugin>
 
             <plugin>
@@ -151,6 +192,29 @@
             </plugin>
         </plugins>
     </build>
+
+    <profiles>
+        <profile>
+            <id>default</id>
+            <activation>
+                <activeByDefault>true</activeByDefault>
+            </activation>
+            <properties>
+                <!-- Only unit tests -->
+                <skip.integration.tests>true</skip.integration.tests>
+                <skip.unit.tests>false</skip.unit.tests>
+            </properties>
+        </profile>
+
+        <profile>
+            <id>integration-test</id>
+            <properties>
+                <!-- Only integration tests -->
+                <skip.integration.tests>false</skip.integration.tests>
+                <skip.unit.tests>true</skip.unit.tests>
+            </properties>
+        </profile>
+    </profiles>
 
     <distributionManagement>
         <repository>

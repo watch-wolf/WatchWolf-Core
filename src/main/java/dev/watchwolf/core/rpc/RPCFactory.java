@@ -3,8 +3,10 @@ package dev.watchwolf.core.rpc;
 import dev.watchwolf.core.rpc.channel.ChannelFactory;
 import dev.watchwolf.core.rpc.objects.converter.RPCObjectsConverterFactory;
 
+import java.io.IOException;
+
 public class RPCFactory {
-    public RPC build(RPCImplementerFactory localImplementationFactory, ChannelFactory remoteConnectionFactory) {
+    public RPC build(RPCImplementerFactory localImplementationFactory, ChannelFactory remoteConnectionFactory) throws IOException {
         RPCObjectsConverterFactory rpcObjectsConverterFactory = new RPCObjectsConverterFactory();
         RPCImplementer implementer = localImplementationFactory.build();
 
