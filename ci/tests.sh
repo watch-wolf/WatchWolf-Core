@@ -26,7 +26,7 @@ base_path=$(dirname "$script_path")
 local_maven_repos_path="$HOME/.m2"
 
 # clear
-docker run -it --rm -v "$base_path":/compile -v "$local_maven_repos_path":/root/.m2 maven:3.8.3-openjdk-17 mvn clean --file '/compile'
+docker run -it --rm -v "$base_path":/compile -v "$local_maven_repos_path":/root/.m2 maven:3.8.4-openjdk-8 mvn clean --file '/compile'
 
 # run the tests
 if [ $unit -eq 1 ]; then
@@ -34,7 +34,7 @@ if [ $unit -eq 1 ]; then
     mkdir -p "$unit_tests_report_path"
 
     # run unit tests
-    docker run -it --rm -v "$base_path":/compile -v "$local_maven_repos_path":/root/.m2 maven:3.8.3-openjdk-17              \
+    docker run -it --rm -v "$base_path":/compile -v "$local_maven_repos_path":/root/.m2 maven:3.8.4-openjdk-8               \
                     mvn test -DskipTests=false -DskipUTs=false -DskipITs=true                                               \
                     -Dmaven.test.redirectTestOutputToFile=true -X --file '/compile'                                         \
             2>&1 | tee "$unit_tests_report_path/docker-log.txt" # forward to file
@@ -54,7 +54,7 @@ if [ $integration -eq 1 ]; then
     mkdir -p "$integration_tests_report_path"
 
     # run integration tests
-    docker run -it --rm -v "$base_path":/compile -v "$local_maven_repos_path":/root/.m2 maven:3.8.3-openjdk-17                  \
+    docker run -it --rm -v "$base_path":/compile -v "$local_maven_repos_path":/root/.m2 maven:3.8.4-openjdk-8                   \
                             mvn test failsafe:integration-test failsafe:verify                                                  \
                             -P integration-test -Dmaven.test.redirectTestOutputToFile=true -X --file '/compile'                 \
             2>&1 | tee "$integration_tests_report_path/docker-log.txt" # forward to file
