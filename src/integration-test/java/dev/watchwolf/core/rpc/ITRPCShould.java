@@ -25,7 +25,7 @@ public class ITRPCShould {
     }
 
     @Test
-    public void connectOneClientWithAServer() throws Exception {
+    public void connectOneClientSocketWithAServerSocket() throws Exception {
         int port = 8900;
 
         RPCImplementer serverImplementer = mock(RPCImplementer.class);

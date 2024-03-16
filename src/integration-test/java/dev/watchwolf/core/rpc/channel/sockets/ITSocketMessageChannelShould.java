@@ -27,7 +27,15 @@ public class ITSocketMessageChannelShould {
             server = new ServerSocketChannelFactory(host, port).build().create();
             client = new ClientSocketChannelFactory(host, port).build().create();
 
-            ((ServerSocketMessageChannel)server).acceptConnection(); // allow client to connect
+            // wait for user to connect
+            int tries = 5;
+            while (tries > 0 && !((ServerSocketMessageChannel)server).isEndConnected()) {
+                try {
+                    Thread.sleep(2_000);
+                } catch (InterruptedException ignore) {}
+                tries--;
+            }
+            assertTrue(((ServerSocketMessageChannel)server).isEndConnected());
 
             client.send(toSend);
 
@@ -58,7 +66,15 @@ public class ITSocketMessageChannelShould {
             server = new ServerSocketChannelFactory(host, port).build().create();
             client = new ClientSocketChannelFactory(host, port).build().create();
 
-            ((ServerSocketMessageChannel)server).acceptConnection(); // allow client to connect
+            // wait for user to connect
+            int tries = 5;
+            while (tries > 0 && !((ServerSocketMessageChannel)server).isEndConnected()) {
+                try {
+                    Thread.sleep(2_000);
+                } catch (InterruptedException ignore) {}
+                tries--;
+            }
+            assertTrue(((ServerSocketMessageChannel)server).isEndConnected());
 
             client.send(toSend);
 
@@ -84,10 +100,19 @@ public class ITSocketMessageChannelShould {
             server = new ServerSocketChannelFactory(host, port).build().create();
             client = new ClientSocketChannelFactory(host, port).build().create();
 
-            ((ServerSocketMessageChannel)server).acceptConnection(); // allow client to connect
+            // wait for user to connect
+            int tries = 5;
+            while (tries > 0 && !((ServerSocketMessageChannel)server).isEndConnected()) {
+                try {
+                    Thread.sleep(2_000);
+                } catch (InterruptedException ignore) {}
+                tries--;
+            }
+            assertTrue(((ServerSocketMessageChannel)server).isEndConnected());
 
             // don't send anything
 
+            // try to get something
             try {
                 server.get(1, 3000);
                 assertTrue(false, "We expected a TimeoutException; got data instead");

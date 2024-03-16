@@ -64,6 +64,7 @@ public class RPCConvertersShould {
 
     @Test
     public void exportZipFiles() throws Exception {
+        // TODO refactor using FS mock com.google.jimfs:jimfs
         File outPath = new File("test-out/");
         HashMap<String,String> zipContents = new HashMap<>();
         zipContents.put("file1.txt", "This is the file 1.");
