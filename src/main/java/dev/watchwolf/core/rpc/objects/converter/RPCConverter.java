@@ -103,7 +103,11 @@ public class RPCConverter<T extends RPCObject> {
 
     public <O> O unmarshall(MessageChannel channel, ClassType<O> type) throws IOException {
         ClassType<? extends RPCObject> rpcType = this.getRPCWrapClass(type);
-        ChannelQueue queuedChannel = new ChannelQueue(channel);
+
+        ChannelQueue queuedChannel;
+        if (channel instanceof ChannelQueue) queuedChannel = (ChannelQueue)channel;
+        else queuedChannel = new ChannelQueue(channel);
+
         RPCObject unmarshalledRpcObject = this._unmarshall(queuedChannel, rpcType);
         return this.unwrap(unmarshalledRpcObject, type);
     }
