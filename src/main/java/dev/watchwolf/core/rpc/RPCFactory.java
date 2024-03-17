@@ -15,4 +15,13 @@ public class RPCFactory {
 
         return built;
     }
+
+    public RPC build(RPCImplementerFactory localImplementationFactory, RPC connectionToClone) {
+        RPCImplementer implementer = localImplementationFactory.build();
+
+        RPC built = new RPC(implementer, connectionToClone);
+        implementer.setHandler(built);
+
+        return built;
+    }
 }

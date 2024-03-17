@@ -15,73 +15,105 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeoutException;
 
-public class ServerSocketMessageChannel extends SocketMessageChannel implements Runnable {
+public class ServerSocketMessageChannel extends SocketMessageChannel {
     /**
      * Requested maximum length of the queue of incoming connections.
      */
     public static final int BACKLOG = 50;
 
     private ServerSocket serverSocket;
-    private Thread socketThread;
     private List<ClientSocketMessageChannel> clients;
 
     public ServerSocketMessageChannel(String host, int port) {
         super(host, port);
     }
 
-    public synchronized MessageChannel create() throws IOException {
-        if (!this.isClosed()) throw new RuntimeException("Can't create an already initialized server!");
+    public MessageChannel create() throws IOException {
+        if (this.isClosed()) {
+            // first call; initialize server
+            synchronized (this) {
+                this.serverSocket = new ServerSocket(this.port, ServerSocketMessageChannel.BACKLOG, InetAddress.getByName(this.host));
+                this.clients = new ArrayList<>();
+            }
+        }
 
-        this.serverSocket = new ServerSocket(this.port, ServerSocketMessageChannel.BACKLOG, InetAddress.getByName(this.host));
-        this.clients = new ArrayList<>();
-        this.socketThread = new Thread(this);
-        this.socketThread.start();
-        return this;
+        return this.acceptConnection();
     }
 
-    public synchronized ClientSocketMessageChannel acceptConnection() throws IOException {
+    private MessageChannel acceptConnection() throws IOException {
         if (this.isClosed()) throw new IllegalArgumentException("You must have an open connection first!");
 
-        int timeout = this.serverSocket.getSoTimeout();
-        this.serverSocket.setSoTimeout(20); // wait 20ms for connections
-        Socket clientSocket = this.serverSocket.accept();
-        this.serverSocket.setSoTimeout(timeout); // restore timeout
+        Socket clientSocket = null;
+        while (clientSocket == null) {
+            synchronized (this) {
+                int timeout = this.serverSocket.getSoTimeout();
+                this.serverSocket.setSoTimeout(200); // don't wait eternally
+                try {
+                    clientSocket = this.serverSocket.accept();
+                } catch (SocketTimeoutException ignore) {}
+                this.serverSocket.setSoTimeout(timeout); // restore timeout
+            }
 
-        ClientSocketMessageChannel clientChannel = (ClientSocketMessageChannel) ((ChannelQueue) new ClientSocketChannelFactory(clientSocket.getInetAddress().getHostAddress(), clientSocket.getPort()).build()).getChannel();
+            if (clientSocket == null) {
+                try {
+                    Thread.sleep(800); // don't take all the resources!
+                } catch (InterruptedException ignore) {}
+            }
+        }
+
+        ChannelQueue clientChannelQueue = (ChannelQueue) new ClientSocketChannelFactory(clientSocket.getInetAddress().getHostAddress(), clientSocket.getPort()).build();
+        ClientSocketMessageChannel clientChannel = (ClientSocketMessageChannel) clientChannelQueue.getChannel();
         clientChannel.create(clientSocket); // don't connect; re-use the connection
+        final ServerSocketMessageChannel _this = this;
+        final Socket _clientSocket = clientSocket;
+        clientChannel.addClientClosedListener(() -> {
+            // if it's the last client, close the server
+            System.out.println("Client closed event (" + _clientSocket.getInetAddress().getHostAddress() + ":" + _clientSocket.getPort() + ")");
+            boolean needsClosing;
+            synchronized (_this) {
+                this.clients.removeIf(ClientSocketMessageChannel::isClosed);
+                needsClosing = this.clients.isEmpty();
+            }
+
+            if (needsClosing) {
+                System.out.println("Last client disconnected from " + _clientSocket.getInetAddress().getHostAddress() + ":" + _clientSocket.getPort() + "; closing server...");
+                try {
+                    _this.close();
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
+            }
+        });
+
         System.out.println("Got client conencted to socket server: " + clientSocket.getInetAddress().getHostAddress() + ":" + clientSocket.getPort());
 
-        this.clients.add(clientChannel);
-        return clientChannel;
+        synchronized (this) {
+            this.clients.add(clientChannel);
+        }
+        return clientChannelQueue;
+    }
+
+
+    @Override
+    public void send(byte[] data) throws IOException {
+        this.broadcast(data);
     }
 
     /**
-     * Will send the data into the first client of the connected clients
+     * Will send the data into all the clients
      * @param data Bytes to send
      * @throws IOException Socket exception
      */
-    @Override
-    public synchronized void send(byte[] data) throws IOException {
+    public synchronized void broadcast(byte[] data) throws IOException {
         this.clients.removeIf(ClientSocketMessageChannel::isClosed);
         if (this.clients.isEmpty()) throw new IOException("No target client to send");
 
-        this.clients.get(0).send(data);
+        for (ClientSocketMessageChannel client : this.clients) client.send(data);
     }
 
-    /**
-     * Will try to get data from the first client of the connected clients
-     * @param numBytes Number of bytes to get
-     * @param timeout Max time until wait
-     * @return Read bytes
-     * @throws TimeoutException Max waiting time reached
-     * @throws IOException Socket exception
-     */
     @Override
-    public synchronized byte[] get(int numBytes, int timeout) throws TimeoutException, IOException {
-        this.clients.removeIf(ClientSocketMessageChannel::isClosed);
-        if (this.clients.isEmpty()) throw new IOException("No target client to get");
-
-        return this.clients.get(0).get(numBytes, timeout);
+    public byte[] get(int numBytes, int timeout) throws TimeoutException, IOException {
+        throw new UnsupportedOperationException("Use the get method from the specific client");
     }
 
     @Override
@@ -93,43 +125,16 @@ public class ServerSocketMessageChannel extends SocketMessageChannel implements 
     public synchronized boolean isEndConnected() {
         if (this.isClosed()) return false;
 
-        return /*this.clients.stream().anyMatch(ClientSocketMessageChannel::isEndConnected)*/this.clients.size() > 0;
+        return this.clients.stream().anyMatch(ClientSocketMessageChannel::isEndConnected);
     }
 
     @Override
-    public void close() throws IOException {
-        synchronized (this) {
-            if (this.clients != null) {
-                for (ClientSocketMessageChannel client : this.clients) client.close();
-                this.clients.clear(); // no connection
-            }
-
-            if (this.serverSocket != null) this.serverSocket.close();
+    public synchronized void close() throws IOException {
+        if (this.clients != null) {
+            for (ClientSocketMessageChannel client : new ArrayList<>(this.clients)) client.close();
+            this.clients.clear(); // no connection
         }
-        if (this.socketThread != null) {
-            try {
-                this.socketThread.join();
-            } catch (InterruptedException ex) {
-                ex.printStackTrace();
-            }
-            this.socketThread = null;
-        }
-    }
 
-    @Override
-    public void run() {
-        while (!this.isClosed()) {
-            // try to accept a connection
-            try {
-                this.acceptConnection();
-            } catch (SocketTimeoutException ignore) {
-            } catch (Exception ex) {
-                ex.printStackTrace();
-            }
-
-            try {
-                Thread.sleep(1_000);
-            } catch (InterruptedException ignore) {}
-        }
+        if (this.serverSocket != null) this.serverSocket.close();
     }
 }

@@ -21,6 +21,8 @@ public class ClientSocketMessageChannel extends SocketMessageChannel {
 
     private Socket socket;
 
+    private Runnable onClientClosedListener;
+
     public ClientSocketMessageChannel(String host, int port) {
         super(host, port);
     }
@@ -28,6 +30,10 @@ public class ClientSocketMessageChannel extends SocketMessageChannel {
     public MessageChannel create() throws IOException {
         this.socket = new Socket(this.host, this.port);
         return this;
+    }
+
+    public synchronized void addClientClosedListener(Runnable onClientClosedListener) {
+        this.onClientClosedListener = onClientClosedListener;
     }
 
     public MessageChannel create(Socket preparedSocket) {
@@ -98,6 +104,9 @@ public class ClientSocketMessageChannel extends SocketMessageChannel {
     @Override
     public void close() throws IOException {
         this.socket.close();
+
+        // invoke closed event (if any)
+        if (this.onClientClosedListener != null) this.onClientClosedListener.run();
     }
 
     /**

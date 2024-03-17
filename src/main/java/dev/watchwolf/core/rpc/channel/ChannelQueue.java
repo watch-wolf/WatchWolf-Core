@@ -66,7 +66,9 @@ public class ChannelQueue implements MessageChannel {
 
     @Override
     public MessageChannel create() throws IOException {
-        return this.channel.create();
+        MessageChannel createReturn = this.channel.create();
+        if (this.channel == createReturn) return this; // same object
+        return createReturn;
     }
 
     @Override
