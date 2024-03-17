@@ -50,7 +50,18 @@ public class ChannelQueue implements MessageChannel {
     @Override
     public boolean areBytesAvailable() {
         if (!this.pushedBackBytes.isEmpty()) return true;
-        return this.channel.areBytesAvailable();
+        try {
+            return this.channel.areBytesAvailable();
+        } catch (UnsupportedOperationException ex) {
+            try {
+                // try to get bytes
+                int timeout = 100;
+                this.pushBack(this.channel.get(1, timeout));
+                return true;
+            } catch (TimeoutException | IOException timeout) {
+                return false; // no data
+            }
+        }
     }
 
     @Override
@@ -66,5 +77,9 @@ public class ChannelQueue implements MessageChannel {
     @Override
     public boolean isClosed() {
         return this.channel.isClosed();
+    }
+
+    public MessageChannel getChannel() {
+        return this.channel;
     }
 }

@@ -30,7 +30,7 @@ public abstract class SocketMessageChannel implements MessageChannel {
 
     @Override
     public boolean areBytesAvailable() {
-        return !this.isClosed() && this.isEndConnected(); // TODO to tell if there's bytes left in a socket use `get` with the `timeout`
+        throw new UnsupportedOperationException();
     }
 
     @Override

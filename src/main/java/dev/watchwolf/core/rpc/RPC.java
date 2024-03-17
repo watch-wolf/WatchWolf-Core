@@ -49,6 +49,10 @@ public class RPC implements Runnable, Closeable {
             } catch (IOException | InterruptedException ex) {
                 ex.printStackTrace();
             }
+
+            try {
+                Thread.sleep(200); // give it some break
+            } catch (InterruptedException ignore) {}
         }
 
         System.out.println("RPC connection (" + localImplementation.getClass().getSimpleName() + " over " + this.remoteConnection.toString() + ") closed");

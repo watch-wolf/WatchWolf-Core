@@ -1,5 +1,6 @@
 package dev.watchwolf.core.rpc.channel.sockets.server;
 
+import dev.watchwolf.core.rpc.channel.ChannelQueue;
 import dev.watchwolf.core.rpc.channel.MessageChannel;
 import dev.watchwolf.core.rpc.channel.sockets.SocketChannelFactory;
 
@@ -10,6 +11,7 @@ public class ServerSocketChannelFactory extends SocketChannelFactory {
 
     @Override
     public MessageChannel build() {
-        return new ServerSocketMessageChannel(this.host, this.port);
+        // server socket depends on ChannelQueue to get if there's bytes queued
+        return new ChannelQueue(new ServerSocketMessageChannel(this.host, this.port));
     }
 }

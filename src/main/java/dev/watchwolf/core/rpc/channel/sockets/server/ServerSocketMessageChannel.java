@@ -1,5 +1,6 @@
 package dev.watchwolf.core.rpc.channel.sockets.server;
 
+import dev.watchwolf.core.rpc.channel.ChannelQueue;
 import dev.watchwolf.core.rpc.channel.MessageChannel;
 import dev.watchwolf.core.rpc.channel.sockets.SocketMessageChannel;
 import dev.watchwolf.core.rpc.channel.sockets.client.ClientSocketChannelFactory;
@@ -46,7 +47,7 @@ public class ServerSocketMessageChannel extends SocketMessageChannel implements 
         Socket clientSocket = this.serverSocket.accept();
         this.serverSocket.setSoTimeout(timeout); // restore timeout
 
-        ClientSocketMessageChannel clientChannel = (ClientSocketMessageChannel) new ClientSocketChannelFactory(clientSocket.getInetAddress().getHostAddress(), clientSocket.getPort()).build();
+        ClientSocketMessageChannel clientChannel = (ClientSocketMessageChannel) ((ChannelQueue) new ClientSocketChannelFactory(clientSocket.getInetAddress().getHostAddress(), clientSocket.getPort()).build()).getChannel();
         clientChannel.create(clientSocket); // don't connect; re-use the connection
         System.out.println("Got client conencted to socket server: " + clientSocket.getInetAddress().getHostAddress() + ":" + clientSocket.getPort());
 

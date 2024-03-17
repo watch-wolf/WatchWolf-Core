@@ -90,6 +90,8 @@ public class ClientSocketMessageChannel extends SocketMessageChannel {
 
     @Override
     public boolean isEndConnected() {
+        if (this.isClosed()) return false;
+
         return this.socket != null && this.socket.isConnected();
     }
 

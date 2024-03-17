@@ -13,7 +13,7 @@ import java.util.concurrent.TimeoutException;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-@Timeout(40)
+@Timeout(20)
 public class ITSocketMessageChannelShould {
     @Test
     public void sendAndReceiveData() throws Exception {
