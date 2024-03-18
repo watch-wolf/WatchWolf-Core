@@ -4,6 +4,7 @@ import dev.watchwolf.core.rpc.channel.MessageChannel;
 import dev.watchwolf.core.rpc.channel.sockets.client.ClientSocketChannelFactory;
 import dev.watchwolf.core.rpc.channel.sockets.server.ServerSocketChannelFactory;
 import dev.watchwolf.core.rpc.channel.sockets.server.ServerSocketMessageChannel;
+import dev.watchwolf.core.utils.StateChangeUtils;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
@@ -53,14 +54,7 @@ public class ITSocketMessageChannelShould {
             client = new ClientSocketChannelFactory(host, port).build().create();
 
             // wait for user to connect
-            tries = 5;
-            while (tries > 0 && !((ServerSocketMessageChannel)server).isEndConnected()) {
-                try {
-                    Thread.sleep(2_000);
-                } catch (InterruptedException ignore) {}
-                tries--;
-            }
-            assertTrue(((ServerSocketMessageChannel)server).isEndConnected());
+            StateChangeUtils.pollForCondition(() -> ((ServerSocketMessageChannel)_server).isEndConnected(), 8_000);
 
             client.send(toSend);
 
@@ -104,26 +98,14 @@ public class ITSocketMessageChannelShould {
             serverThread.start();
 
             // wait for it to start
-            int tries = 8;
-            while (tries > 0 && server.isClosed()) {
-                try {
-                    Thread.sleep(200);
-                } catch (InterruptedException ignore) { }
-                tries--;
-            }
-            assertFalse(server.isClosed(), "Expected opened server; got closed one instead");
+            StateChangeUtils.pollForCondition(() -> !_server.isClosed(), 1_600,
+                                            "Expected opened server; got closed one instead");
 
             client = new ClientSocketChannelFactory(host, port).build().create();
 
             // wait for user to connect
-            tries = 5;
-            while (tries > 0 && !((ServerSocketMessageChannel)server).isEndConnected()) {
-                try {
-                    Thread.sleep(2_000);
-                } catch (InterruptedException ignore) {}
-                tries--;
-            }
-            assertTrue(((ServerSocketMessageChannel)server).isEndConnected());
+            StateChangeUtils.pollForCondition(() -> ((ServerSocketMessageChannel)_server).isEndConnected(), 8_000,
+                    "Expected client connected; got empty instead");
 
             client.send(toSend);
 
@@ -162,26 +144,14 @@ public class ITSocketMessageChannelShould {
             serverThread.start();
 
             // wait for it to start
-            int tries = 8;
-            while (tries > 0 && server.isClosed()) {
-                try {
-                    Thread.sleep(200);
-                } catch (InterruptedException ignore) { }
-                tries--;
-            }
-            assertFalse(server.isClosed(), "Expected opened server; got closed one instead");
+            StateChangeUtils.pollForCondition(() -> !_server.isClosed(), 1_600,
+                                                "Expected opened server; got closed one instead");
 
             client = new ClientSocketChannelFactory(host, port).build().create();
 
             // wait for user to connect
-            tries = 5;
-            while (tries > 0 && !((ServerSocketMessageChannel)server).isEndConnected()) {
-                try {
-                    Thread.sleep(2_000);
-                } catch (InterruptedException ignore) {}
-                tries--;
-            }
-            assertTrue(((ServerSocketMessageChannel)server).isEndConnected());
+            StateChangeUtils.pollForCondition(() -> ((ServerSocketMessageChannel)_server).isEndConnected(), 8_000,
+                    "Expected client connected; got empty instead");
 
             // don't send anything
 

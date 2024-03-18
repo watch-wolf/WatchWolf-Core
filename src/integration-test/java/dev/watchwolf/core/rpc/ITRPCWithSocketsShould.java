@@ -6,6 +6,7 @@ import dev.watchwolf.core.rpc.channel.sockets.client.ClientSocketChannelFactory;
 import dev.watchwolf.core.rpc.channel.sockets.client.ClientSocketMessageChannel;
 import dev.watchwolf.core.rpc.channel.sockets.server.ServerSocketChannelFactory;
 import dev.watchwolf.core.rpc.objects.converter.RPCConverter;
+import dev.watchwolf.core.utils.StateChangeUtils;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.mockito.ArgumentCaptor;
@@ -58,13 +59,9 @@ public class ITRPCWithSocketsShould {
             clientThread.start();
 
             // wait for them to connect
-            int tries = 4;
-            while (tries > 0 && !server.isRunning()) {
-                try {
-                    Thread.sleep(2_000);
-                } catch (InterruptedException ignore) { }
-                tries--;
-            }
+            final RPC _server = server;
+            StateChangeUtils.pollForCondition(() -> _server.isRunning(), 8_000,
+                                            "Expected server to be running; found stopped server otherwise");
 
             // get the socket objects
             ChannelQueue serverQueue = (ChannelQueue) getRPCMessageChannelInstance(server);
@@ -145,13 +142,9 @@ public class ITRPCWithSocketsShould {
             client2Thread.start();
 
             // wait for them to connect
-            int tries = 4;
-            while (tries > 0 && (!server.isRunning() || !serverEndpointForClient2.isRunning())) {
-                try {
-                    Thread.sleep(2_000);
-                } catch (InterruptedException ignore) { }
-                tries--;
-            }
+            final RPC _server = server,
+                    _serverEndpointForClient2 = serverEndpointForClient2;
+            StateChangeUtils.pollForCondition(() -> _server.isRunning() && _serverEndpointForClient2.isRunning(), 8_000);
 
             // get the socket objects
             ClientSocketMessageChannel serverClientConnectionSocket = (ClientSocketMessageChannel) ((ChannelQueue) getRPCMessageChannelInstance(server)).getChannel();
@@ -225,13 +218,7 @@ public class ITRPCWithSocketsShould {
             clientThread.start();
 
             // wait for them to connect
-            int tries = 4;
-            while (tries > 0 && !server.isRunning()) {
-                try {
-                    Thread.sleep(2_000);
-                } catch (InterruptedException ignore) { }
-                tries--;
-            }
+            StateChangeUtils.pollForCondition(() -> server.isRunning(), 8_000);
 
             // get the socket objects
             ChannelQueue clientQueue = (ChannelQueue) getRPCMessageChannelInstance(client);
@@ -242,21 +229,9 @@ public class ITRPCWithSocketsShould {
                     new dev.watchwolf.core.rpc.objects.types.natives.primitive.RPCByte((byte) 0b00000000)
             );
 
-            // wait for client to get the data
-            tries = 3;
-            while (tries > 0 && !clientQueue.areBytesAvailable()) {
-                try {
-                    Thread.sleep(500);
-                } catch (InterruptedException ignore) { }
-                tries--;
-            }
-            tries = 8;
-            while (tries > 0 && clientQueue.areBytesAvailable()) {
-                try {
-                    Thread.sleep(500);
-                } catch (InterruptedException ignore) { }
-                tries--;
-            }
+            // wait for client to get (and then consume) the data
+            StateChangeUtils.tryPollForCondition(() -> clientQueue.areBytesAvailable(), 1_500);
+            StateChangeUtils.pollForCondition(() -> !clientQueue.areBytesAvailable(), 4_000);
 
             // assert - an event should have been received
             assertFalse(clientQueue.areBytesAvailable(), "We expected the client to have read all bytes; got some bytes left instead");
@@ -324,26 +299,14 @@ public class ITRPCWithSocketsShould {
             client1Thread.start();
 
             // wait first 2 to connect
-            int tries = 4;
-            while (tries > 0 && !server.isRunning()) {
-                try {
-                    Thread.sleep(2_000);
-                } catch (InterruptedException ignore) { }
-                tries--;
-            }
+            StateChangeUtils.pollForCondition(() -> server.isRunning(), 8_000);
 
             // link second server RPC instance with client 2
             serverSecondThread.start();
             client2Thread.start();
 
             // wait for the rest to connect
-            tries = 4;
-            while (tries > 0 && !serverEndpointForClient2.isRunning()) {
-                try {
-                    Thread.sleep(2_000);
-                } catch (InterruptedException ignore) { }
-                tries--;
-            }
+            StateChangeUtils.pollForCondition(() -> serverEndpointForClient2.isRunning(), 8_000);
 
             // get the socket objects
             ChannelQueue client1Queue = (ChannelQueue) getRPCMessageChannelInstance(client1);
@@ -355,21 +318,9 @@ public class ITRPCWithSocketsShould {
                     new dev.watchwolf.core.rpc.objects.types.natives.primitive.RPCByte((byte) 0b00000000)
             );
 
-            // wait for client to get the data
-            tries = 3;
-            while (tries > 0 && !client2Queue.areBytesAvailable()) {
-                try {
-                    Thread.sleep(500);
-                } catch (InterruptedException ignore) { }
-                tries--;
-            }
-            tries = 8;
-            while (tries > 0 && client2Queue.areBytesAvailable()) {
-                try {
-                    Thread.sleep(500);
-                } catch (InterruptedException ignore) { }
-                tries--;
-            }
+            // wait for client to get (and then consume) the data
+            StateChangeUtils.tryPollForCondition(() -> client2Queue.areBytesAvailable(), 1_500);
+            StateChangeUtils.pollForCondition(() -> !client2Queue.areBytesAvailable(), 4_000);
 
             // assert - an event should have been received
             assertFalse(client1Queue.areBytesAvailable(), "We expected no data sent to the client 1; got some bytes left instead");
