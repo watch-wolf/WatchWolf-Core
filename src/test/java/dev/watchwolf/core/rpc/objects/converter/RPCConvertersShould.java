@@ -4,12 +4,14 @@ import dev.watchwolf.core.entities.files.ConfigFile;
 import dev.watchwolf.core.entities.files.ZipFile;
 import dev.watchwolf.core.entities.files.plugins.Plugin;
 import dev.watchwolf.core.entities.files.plugins.UsualPlugin;
+import dev.watchwolf.core.rpc.channel.MessageChannel;
 import dev.watchwolf.core.rpc.objects.types.RPCObject;
 import dev.watchwolf.core.rpc.objects.types.custom.files.RPCConfigFile;
 import dev.watchwolf.core.rpc.objects.types.custom.files.plugins.RPCUsualPlugin;
 import dev.watchwolf.core.rpc.objects.types.natives.composited.RPCArray;
 import dev.watchwolf.core.rpc.objects.types.natives.composited.RPCString;
 import dev.watchwolf.core.rpc.objects.types.natives.primitive.RPCChar;
+import dev.watchwolf.core.utils.MessageChannelMock;
 import org.junit.jupiter.api.Test;
 
 import java.io.File;
@@ -60,6 +62,21 @@ public class RPCConvertersShould {
         Object unwrappedObject = converters.unwrap(wrappedObject, msg.getClass());
 
         assertEquals(msg, unwrappedObject.toString());
+    }
+
+    @Test
+    public void unmarshallString() throws Exception {
+        RPCObjectsConverterFactory factory = new RPCObjectsConverterFactory();
+        RPCConverter<?> converters = factory.build();
+
+        MessageChannel data = new MessageChannelMock(new byte[]{
+                0x06, 0x00, // 6 character-long string
+                'S', 'p', 'i', 'g', 'o', 't'
+        });
+
+        String got = converters.unmarshall(data, RPCString.class).getObject();
+
+        assertEquals("Spigot", got);
     }
 
     @Test
