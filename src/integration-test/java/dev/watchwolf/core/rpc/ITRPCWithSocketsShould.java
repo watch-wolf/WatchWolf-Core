@@ -438,11 +438,82 @@ public class ITRPCWithSocketsShould {
 
     @Test
     public void allowNewUsersToJoinWhenLastOneDisconnected() throws Exception {
-        // TODO launch server
-        // TODO connect one user
-        // TODO disconnect user
-        // TODO listen for other user
-        // TODO connect user
-        // TODO assert connection
+        int port = 8900;
+
+        RPCImplementer serverImplementer = getClientMock(null);
+        RPCImplementer clientImplementer = mock(RPCImplementer.class);
+
+        RPCImplementerFactory serverImplementerFactory = mock(RPCImplementerFactory.class);
+        when(serverImplementerFactory.build()).thenReturn(serverImplementer);
+
+        RPCImplementerFactory clientImplementerFactory = mock(RPCImplementerFactory.class);
+        when(clientImplementerFactory.build()).thenReturn(clientImplementer);
+
+        RPC server = null,
+                serverEndpointForClient2 = null,
+                client1 = null,
+                client2 = null;
+        Thread serverThread = null,
+                serverSecondThread = null,
+                client1Thread = null,
+                client2Thread = null;
+        try {
+            server = new RPCFactory().build(serverImplementerFactory, new ServerSocketChannelFactory("127.0.0.1", port));
+            client1 = new RPCFactory().build(clientImplementerFactory, new ClientSocketChannelFactory("127.0.0.1", port));
+            serverThread = new Thread(server);
+            client1Thread = new Thread(client1);
+            serverThread.start();
+            client1Thread.start();
+
+            // wait for them to connect
+            final RPC _server = server;
+            StateChangeUtils.pollForCondition(() -> _server.isRunning(), 8_000,
+                    "Couldn't start server connection");
+            final ClientSocketMessageChannel serverClient1ConnectionSocket = getRPCMessageChannelInstance(server);
+            StateChangeUtils.pollForCondition(() -> serverClient1ConnectionSocket.isEndConnected(), 8_000,
+                    "Couldn't get first client connected");
+
+            // disconnect one user
+            client1.close();
+            client1Thread.join(8_000);
+            client1 = null;
+            client1Thread = null;
+            StateChangeUtils.pollForCondition(() -> serverClient1ConnectionSocket.isClosed(), 8_000,
+                    "Tried to close client, but it is still running");
+            StateChangeUtils.pollForCondition(() -> !_server.isRunning(), 8_000,
+                    "Expected server to stop; got running instead");
+
+            // connect second user
+            // launch the second server
+            serverEndpointForClient2 = new RPCFactory().build(serverImplementerFactory, server);
+            serverSecondThread = new Thread(serverEndpointForClient2);
+            serverSecondThread.start();
+
+            // launch second user
+            client2 = new RPCFactory().build(clientImplementerFactory, new ClientSocketChannelFactory("127.0.0.1", port));
+            client2Thread = new Thread(client2);
+            client2Thread.start();
+
+            // wait for server to start
+            final RPC _serverEndpointForClient2 = serverEndpointForClient2;
+            StateChangeUtils.pollForCondition(() -> _serverEndpointForClient2.isRunning(), 8_000,
+                    "Couldn't start server connection for second time");
+
+            // assert - the client should be able to connect
+            final ClientSocketMessageChannel serverClient2ConnectionSocket = getRPCMessageChannelInstance(serverEndpointForClient2);
+            StateChangeUtils.pollForCondition(() -> serverClient2ConnectionSocket.isEndConnected(), 8_000,
+                    "Couldn't get second client connected");
+        } finally {
+            System.out.println("- Clearing resources...");
+            if (server != null) server.close();
+            if (serverEndpointForClient2 != null) serverEndpointForClient2.close();
+            if (client1 != null) client1.close();
+            if (client2 != null) client2.close();
+
+            if (serverThread != null) serverThread.join(8_000);
+            if (serverSecondThread != null) serverSecondThread.join(8_000);
+            if (client1Thread != null) client1Thread.join(8_000);
+            if (client2Thread != null) client2Thread.join(8_000);
+        }
     }
 }
