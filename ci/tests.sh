@@ -3,12 +3,14 @@
 # default variables
 unit=0
 integration=0
+test_match=""
 
 # parse params
 while [[ "$#" -gt 0 ]]; do
     case $1 in
         --unit) unit=1 ;;
         --integration) integration=1 ;;
+        --tests) test_match="$2" ; shift ;;
         
         *) echo "[e] Unknown parameter passed: $1" >&2 ; exit 1 ;;
     esac
@@ -54,11 +56,20 @@ if [ $integration -eq 1 ]; then
     mkdir -p "$integration_tests_report_path"
 
     # run integration tests
-    docker run -it --rm -v "$base_path":/compile -v "$local_maven_repos_path":/root/.m2 maven:3.8.4-openjdk-8                   \
-                            mvn test failsafe:integration-test failsafe:verify                                                  \
-                            -P integration-test -Dmaven.test.redirectTestOutputToFile=true -X --file '/compile'                 \
-            2>&1 | tee "$integration_tests_report_path/docker-log.txt" # forward to file
-    result=$?
+    if [ ! -z "$test_match" ]; then
+        echo "[v] Running filtered tests: $test_match"
+        docker run -it --rm -v "$base_path":/compile -v "$local_maven_repos_path":/root/.m2 maven:3.8.4-openjdk-8                               \
+                                mvn test failsafe:integration-test failsafe:verify                                                              \
+                                -P integration-test -Dmaven.test.redirectTestOutputToFile=true -D it.test="$test_match" -X --file '/compile'    \
+                2>&1 | tee "$integration_tests_report_path/docker-log.txt" # forward to file
+        result=$?
+    else
+        docker run -it --rm -v "$base_path":/compile -v "$local_maven_repos_path":/root/.m2 maven:3.8.4-openjdk-8                               \
+                                mvn test failsafe:integration-test failsafe:verify                                                              \
+                                -P integration-test -Dmaven.test.redirectTestOutputToFile=true -X --file '/compile'                             \
+                2>&1 | tee "$integration_tests_report_path/docker-log.txt" # forward to file
+        result=$?
+    fi
 
     # Convert xml reports into html
     docker run -it --rm -v "$base_path":/compile -v "$local_maven_repos_path":/root/.m2 maven:3.8.3-openjdk-17 mvn surefire-report:failsafe-report-only --file '/compile'

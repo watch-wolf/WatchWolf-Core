@@ -1,5 +1,6 @@
 package dev.watchwolf.core.rpc.channel.sockets.client;
 
+import dev.watchwolf.core.rpc.channel.ChannelQueue;
 import dev.watchwolf.core.rpc.channel.MessageChannel;
 import dev.watchwolf.core.rpc.channel.sockets.SocketMessageChannel;
 
@@ -8,7 +9,9 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.Socket;
 import java.net.SocketTimeoutException;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.concurrent.TimeoutException;
 
 public class ClientSocketMessageChannel extends SocketMessageChannel {
@@ -21,46 +24,117 @@ public class ClientSocketMessageChannel extends SocketMessageChannel {
 
     private Socket socket;
 
-    private Runnable onClientClosedListener;
+    private boolean isClosed;
+
+    private List<Runnable> onClientClosedListener;
+
+    private boolean connectedEnd;
+
+    private final ChannelQueue byteQueue;
 
     public ClientSocketMessageChannel(String host, int port) {
         super(host, port);
+        this.connectedEnd = false;
+        this.onClientClosedListener = new ArrayList<>();
+
+        final ClientSocketMessageChannel _this = this;
+        this.byteQueue = new ChannelQueue(new MessageChannel() {
+            @Override
+            public void send(byte... data) throws IOException {
+                DataOutputStream dos = new DataOutputStream(_this.socket.getOutputStream());
+                for (byte []maxLenghtData : splitBytes(data, MAX_SOCKET_MESSAGE_LENGTH)) dos.write(maxLenghtData);
+                _this.connectedEnd = true; // end is connected
+            }
+
+            @Override
+            public byte[] get(int numBytes, int timeout) throws TimeoutException, IOException {
+                int originalTimeout = _this.socket.getSoTimeout();
+                try {
+                    _this.socket.setSoTimeout(timeout);
+
+                    DataInputStream dis = new DataInputStream(_this.socket.getInputStream());
+
+                    try {
+                        byte[] r = new byte[numBytes];
+                        segmentedRead(dis, r);
+                        _this.connectedEnd = true; // end is connected
+                        return r;
+                    } catch (SocketTimeoutException ex) {
+                        _this.connectedEnd = true; // end is connected
+                        throw new TimeoutException(ex.getMessage());
+                    }
+                } finally {
+                    _this.socket.setSoTimeout(originalTimeout);
+                }
+            }
+
+            @Override
+            public boolean areBytesAvailable() {
+                throw new UnsupportedOperationException();
+            }
+
+            @Override
+            public MessageChannel create() throws IOException {
+                _this.socket = new Socket(_this.host, _this.port);
+                _this.isClosed = false;
+                return _this;
+            }
+
+            @Override
+            public void close() throws IOException {
+                if (_this.isClosed) return; // already closed
+
+                _this.isClosed = true;
+                if (!_this.socket.isClosed()) _this.socket.close();
+
+                // invoke closed events
+                for (Runnable listener : _this.onClientClosedListener) listener.run();
+            }
+
+            @Override
+            public boolean isClosed() {
+                if (_this.isClosed) return true;
+
+                if (!_this.socket.isClosed() && !_this.disconnectedEnd()) return false; // still running
+                else {
+                    // it is actually closed, but not officially
+                    // close it on the next tick
+                    new Thread(() -> {
+                        try {
+                            _this.close();
+                        } catch (IOException ignore) {}
+                    }).start();
+
+                    return true;
+                }
+            }
+        });
     }
 
     public MessageChannel create() throws IOException {
-        this.socket = new Socket(this.host, this.port);
-        return this;
+        return this.byteQueue.create();
     }
 
     public synchronized void addClientClosedListener(Runnable onClientClosedListener) {
-        this.onClientClosedListener = onClientClosedListener;
+        this.onClientClosedListener.add(onClientClosedListener);
     }
 
-    public MessageChannel create(Socket preparedSocket) {
+    public MessageChannel create(Socket preparedSocket) throws IOException {
         this.socket = preparedSocket;
+        this.isClosed = false;
         return this;
     }
 
     @Override
-    public void send(byte[] data) throws IOException {
-        DataOutputStream dos = new DataOutputStream(this.socket.getOutputStream());
-        for (byte []maxLenghtData : splitBytes(data, MAX_SOCKET_MESSAGE_LENGTH)) dos.write(maxLenghtData);
+    public synchronized void send(byte[] data) throws IOException {
+        this.byteQueue.send(data);
     }
 
     @Override
-    public byte[] get(int numBytes, int timeout) throws TimeoutException, IOException {
+    public synchronized byte[] get(int numBytes, int timeout) throws TimeoutException, IOException {
         if (timeout == 0) timeout = 1; // 0 timeout is "no timeout"; set a small value
 
-        DataInputStream dis = new DataInputStream(this.socket.getInputStream());
-        this.socket.setSoTimeout(timeout);
-
-        try {
-            byte []r = new byte[numBytes];
-            segmentedRead(dis, r);
-            return r;
-        } catch (SocketTimeoutException ex) {
-            throw new TimeoutException(ex.getMessage());
-        }
+        return this.byteQueue.get(numBytes, timeout);
     }
 
     private int segmentedRead(DataInputStream dis, byte []r) throws IOException,SocketTimeoutException {
@@ -90,23 +164,35 @@ public class ClientSocketMessageChannel extends SocketMessageChannel {
     }
 
     @Override
-    public boolean isClosed() {
-        return this.socket == null || this.socket.isClosed();
+    public synchronized boolean isClosed() {
+        return this.byteQueue.isClosed();
     }
 
     @Override
-    public boolean isEndConnected() {
-        if (this.isClosed()) return false;
-
-        return this.socket != null && this.socket.isConnected();
+    public boolean areBytesAvailable() {
+        return this.byteQueue.areBytesAvailable();
     }
 
     @Override
-    public void close() throws IOException {
-        this.socket.close();
+    public synchronized boolean isEndConnected() {
+        try {
+            byte []got = this.byteQueue.get(1, 5);
+            this.byteQueue.pushBack(got);
+            return true; // succeed
+        } catch (TimeoutException ex) {
+            return true; // not failed
+        } catch (IOException ex) {
+            return false; // failed
+        }
+    }
 
-        // invoke closed event (if any)
-        if (this.onClientClosedListener != null) this.onClientClosedListener.run();
+    private synchronized boolean disconnectedEnd() {
+        return (this.connectedEnd && !this.isEndConnected()); // was connected and now it isn't
+    }
+
+    @Override
+    public synchronized void close() throws IOException {
+        this.byteQueue.close();
     }
 
     /**
@@ -117,8 +203,7 @@ public class ClientSocketMessageChannel extends SocketMessageChannel {
      * @param chunkSize Max size of a sub-array
      * @return Array of chunk-sized arrays
      */
-    public static byte[][] splitBytes(final byte[] data, final int chunkSize)
-    {
+    public static byte[][] splitBytes(final byte[] data, final int chunkSize) {
         final int length = data.length;
         final byte[][] dest = new byte[(length + chunkSize - 1)/chunkSize][];
         int destIndex = 0;

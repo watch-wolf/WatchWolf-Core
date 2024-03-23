@@ -61,8 +61,7 @@ public class ServerSocketMessageChannel extends SocketMessageChannel {
             }
         }
 
-        ChannelQueue clientChannelQueue = (ChannelQueue) new ClientSocketChannelFactory(clientSocket.getInetAddress().getHostAddress(), clientSocket.getPort()).build();
-        ClientSocketMessageChannel clientChannel = (ClientSocketMessageChannel) clientChannelQueue.getChannel();
+        ClientSocketMessageChannel clientChannel = (ClientSocketMessageChannel) new ClientSocketChannelFactory(clientSocket.getInetAddress().getHostAddress(), clientSocket.getPort()).build();
         clientChannel.create(clientSocket); // don't connect; re-use the connection
         final ServerSocketMessageChannel _this = this;
         final Socket _clientSocket = clientSocket;
@@ -76,7 +75,7 @@ public class ServerSocketMessageChannel extends SocketMessageChannel {
             }
 
             if (needsClosing) {
-                System.out.println("Last client disconnected from " + _clientSocket.getInetAddress().getHostAddress() + ":" + _clientSocket.getPort() + "; closing server...");
+                System.out.println("Last client disconnected from " + _this.serverSocket.getInetAddress().getHostAddress() + ":" + _this.serverSocket.getLocalPort() + "; closing server...");
                 try {
                     _this.close();
                 } catch (IOException e) {
@@ -90,7 +89,7 @@ public class ServerSocketMessageChannel extends SocketMessageChannel {
         synchronized (this) {
             this.clients.add(clientChannel);
         }
-        return clientChannelQueue;
+        return clientChannel;
     }
 
 
@@ -130,11 +129,13 @@ public class ServerSocketMessageChannel extends SocketMessageChannel {
 
     @Override
     public synchronized void close() throws IOException {
+        System.out.println("Closing server " + this.serverSocket.getInetAddress().getHostAddress() + ":" + this.serverSocket.getLocalPort() + "...");
         if (this.clients != null) {
             for (ClientSocketMessageChannel client : new ArrayList<>(this.clients)) client.close();
             this.clients.clear(); // no connection
         }
 
         if (this.serverSocket != null) this.serverSocket.close();
+        System.out.println("Server closed.");
     }
 }

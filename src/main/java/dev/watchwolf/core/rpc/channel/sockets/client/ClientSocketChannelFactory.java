@@ -12,6 +12,6 @@ public class ClientSocketChannelFactory extends SocketChannelFactory {
     @Override
     public MessageChannel build() {
         // client socket depends on ChannelQueue to get if there's bytes queued
-        return new ChannelQueue(new ClientSocketMessageChannel(this.host, this.port));
+        return new ClientSocketMessageChannel(this.host, this.port);
     }
 }

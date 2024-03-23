@@ -1,18 +1,20 @@
 package dev.watchwolf.core.rpc;
 
-import dev.watchwolf.core.rpc.channel.ChannelQueue;
 import dev.watchwolf.core.rpc.channel.MessageChannel;
 import dev.watchwolf.core.rpc.channel.sockets.client.ClientSocketChannelFactory;
 import dev.watchwolf.core.rpc.channel.sockets.client.ClientSocketMessageChannel;
 import dev.watchwolf.core.rpc.channel.sockets.server.ServerSocketChannelFactory;
+import dev.watchwolf.core.rpc.channel.sockets.server.ServerSocketMessageChannel;
 import dev.watchwolf.core.rpc.objects.converter.RPCConverter;
 import dev.watchwolf.core.utils.StateChangeUtils;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.mockito.ArgumentCaptor;
 
+import java.io.IOException;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -26,11 +28,39 @@ public class ITRPCWithSocketsShould {
         return (MessageChannel) messageChannelField.get(rpc);
     }
 
-    public static MessageChannel getRPCMessageChannelInstance(RPC rpc) throws Exception {
+    public static ClientSocketMessageChannel getRPCMessageChannelInstance(RPC rpc) throws Exception {
         Field messageChannelField = RPC.class.getDeclaredField("linkedConnection");
         messageChannelField.setAccessible(true);
 
-        return (MessageChannel) messageChannelField.get(rpc);
+        return (ClientSocketMessageChannel) messageChannelField.get(rpc);
+    }
+
+    public static RPCImplementer getClientMock(final ArrayList<Short> got) throws IOException {
+        RPCImplementer clientImplementer = mock(RPCImplementer.class);
+        doAnswer((invocation) -> {
+            MessageChannel channel = invocation.getArgument(0);
+            RPCConverter<?> converter = invocation.getArgument(1);
+            short info = converter.unmarshall(channel, Short.class); // discard event data
+            if (got != null) got.add(info);
+            return null;
+        })
+                .when(clientImplementer)
+                .forwardCall(any(MessageChannel.class), any(RPCConverter.class));
+        return clientImplementer;
+    }
+
+    public static ClientSocketMessageChannel getClientSocketChannelListeningForClose(RPC server, final AtomicBoolean closed) throws Exception {
+        closed.set(false);
+
+        ClientSocketMessageChannel connection = getRPCMessageChannelInstance(server);
+        connection.addClientClosedListener(() -> {
+            synchronized (closed) {
+                if (closed.get()) throw new RuntimeException("Got second 'client closed' event");
+                closed.set(true);
+            }
+        });
+
+        return connection;
     }
 
     @Test
@@ -38,7 +68,7 @@ public class ITRPCWithSocketsShould {
         int port = 8900;
 
         RPCImplementer serverImplementer = mock(RPCImplementer.class);
-        RPCImplementer clientImplementer = mock(RPCImplementer.class);
+        RPCImplementer clientImplementer = getClientMock(null);
 
         RPCImplementerFactory serverImplementerFactory = mock(RPCImplementerFactory.class);
         when(serverImplementerFactory.build()).thenReturn(serverImplementer);
@@ -64,10 +94,8 @@ public class ITRPCWithSocketsShould {
                                             "Expected server to be running; found stopped server otherwise");
 
             // get the socket objects
-            ChannelQueue serverQueue = (ChannelQueue) getRPCMessageChannelInstance(server);
-            ClientSocketMessageChannel serverClientConnectionSocket = (ClientSocketMessageChannel) serverQueue.getChannel();
-            ChannelQueue clientQueue = (ChannelQueue) getRPCMessageChannelInstance(client);
-            ClientSocketMessageChannel clientSocket = (ClientSocketMessageChannel) clientQueue.getChannel();
+            ClientSocketMessageChannel serverClientConnectionSocket = getRPCMessageChannelInstance(server);
+            ClientSocketMessageChannel clientSocket = getRPCMessageChannelInstance(client);
 
             // capture handler
             ArgumentCaptor<RPC> serverCaptor = ArgumentCaptor.forClass(RPC.class),
@@ -88,8 +116,8 @@ public class ITRPCWithSocketsShould {
             assertTrue(clientSocket.isEndConnected(), "Client socket got no server connection");
 
             // assert - we didn't send anything
-            assertFalse(serverQueue.areBytesAvailable(), "We expected no bytes on the server socket; got bytes instead");
-            assertFalse(clientQueue.areBytesAvailable(), "We expected no bytes on the client socket; got bytes instead");
+            assertFalse(serverClientConnectionSocket.areBytesAvailable(), "We expected no bytes on the server socket; got bytes instead");
+            assertFalse(clientSocket.areBytesAvailable(), "We expected no bytes on the client socket; got bytes instead");
         } finally {
             // close the servers
             if (server != null) server.close();
@@ -110,7 +138,7 @@ public class ITRPCWithSocketsShould {
     public void connectTwoClientSocketsWithAServerSocket() throws Exception {
         int port = 8900;
 
-        RPCImplementer serverImplementer = mock(RPCImplementer.class);
+        RPCImplementer serverImplementer = getClientMock(null);
         RPCImplementer clientImplementer = mock(RPCImplementer.class);
 
         RPCImplementerFactory serverImplementerFactory = mock(RPCImplementerFactory.class);
@@ -147,9 +175,9 @@ public class ITRPCWithSocketsShould {
             StateChangeUtils.pollForCondition(() -> _server.isRunning() && _serverEndpointForClient2.isRunning(), 8_000);
 
             // get the socket objects
-            ClientSocketMessageChannel serverClientConnectionSocket = (ClientSocketMessageChannel) ((ChannelQueue) getRPCMessageChannelInstance(server)).getChannel();
-            ClientSocketMessageChannel client1Socket = (ClientSocketMessageChannel) ((ChannelQueue) getRPCMessageChannelInstance(client1)).getChannel();
-            ClientSocketMessageChannel client2Socket = (ClientSocketMessageChannel) ((ChannelQueue) getRPCMessageChannelInstance(client2)).getChannel();
+            ClientSocketMessageChannel serverClientConnectionSocket = getRPCMessageChannelInstance(server);
+            ClientSocketMessageChannel client1Socket = getRPCMessageChannelInstance(client1);
+            ClientSocketMessageChannel client2Socket = getRPCMessageChannelInstance(client2);
 
             // assert - each end should be connected
             assertTrue(getRPCMessageChannel(server) == getRPCMessageChannel(serverEndpointForClient2), "Main socket differs within RPC servers");
@@ -190,17 +218,8 @@ public class ITRPCWithSocketsShould {
 
         RPCImplementer serverImplementer = mock(RPCImplementer.class);
 
-        RPCImplementer clientImplementer = mock(RPCImplementer.class);
         final ArrayList<Short> got = new ArrayList<>();
-        doAnswer((invocation) -> {
-                MessageChannel channel = invocation.getArgument(0);
-                RPCConverter<?> converter = invocation.getArgument(1);
-                short info = converter.unmarshall(channel, Short.class); // discard event data
-                got.add(info);
-                return null;
-            })
-            .when(clientImplementer)
-                .forwardCall(any(MessageChannel.class), any(RPCConverter.class));
+        RPCImplementer clientImplementer = getClientMock(got);
 
         RPCImplementerFactory serverImplementerFactory = mock(RPCImplementerFactory.class);
         when(serverImplementerFactory.build()).thenReturn(serverImplementer);
@@ -221,7 +240,7 @@ public class ITRPCWithSocketsShould {
             StateChangeUtils.pollForCondition(() -> server.isRunning(), 8_000);
 
             // get the socket objects
-            ChannelQueue clientQueue = (ChannelQueue) getRPCMessageChannelInstance(client);
+            ClientSocketMessageChannel clientQueue = getRPCMessageChannelInstance(client);
 
             // send an event with no data
             server.sendEvent(
@@ -249,29 +268,11 @@ public class ITRPCWithSocketsShould {
 
         RPCImplementer serverImplementer = mock(RPCImplementer.class);
 
-        RPCImplementer client1Implementer = mock(RPCImplementer.class);
         final ArrayList<Short> falseGot = new ArrayList<>();
-        doAnswer((invocation) -> {
-            MessageChannel channel = invocation.getArgument(0);
-            RPCConverter<?> converter = invocation.getArgument(1);
-            short info = converter.unmarshall(channel, Short.class); // discard event data
-            falseGot.add(info);
-            return null;
-        })
-                .when(client1Implementer)
-                .forwardCall(any(MessageChannel.class), any(RPCConverter.class));
+        RPCImplementer client1Implementer = getClientMock(falseGot);
 
-        RPCImplementer client2Implementer = mock(RPCImplementer.class);
         final ArrayList<Short> got = new ArrayList<>();
-        doAnswer((invocation) -> {
-            MessageChannel channel = invocation.getArgument(0);
-            RPCConverter<?> converter = invocation.getArgument(1);
-            short info = converter.unmarshall(channel, Short.class); // discard event data
-            got.add(info);
-            return null;
-        })
-                .when(client2Implementer)
-                .forwardCall(any(MessageChannel.class), any(RPCConverter.class));
+        RPCImplementer client2Implementer = getClientMock(got);
 
         RPCImplementerFactory serverImplementerFactory = mock(RPCImplementerFactory.class);
         when(serverImplementerFactory.build()).thenReturn(serverImplementer);
@@ -309,8 +310,8 @@ public class ITRPCWithSocketsShould {
             StateChangeUtils.pollForCondition(() -> serverEndpointForClient2.isRunning(), 8_000);
 
             // get the socket objects
-            ChannelQueue client1Queue = (ChannelQueue) getRPCMessageChannelInstance(client1);
-            ChannelQueue client2Queue = (ChannelQueue) getRPCMessageChannelInstance(client2);
+            ClientSocketMessageChannel client1Queue = getRPCMessageChannelInstance(client1);
+            ClientSocketMessageChannel client2Queue = getRPCMessageChannelInstance(client2);
 
             // send an event with no data
             serverEndpointForClient2.sendEvent(
@@ -338,18 +339,105 @@ public class ITRPCWithSocketsShould {
     }
 
     @Test
-    public void closeServerWhenLastUserLeaves() throws Exception {
-        // TODO launch server
-        // TODO connect one user
-        // TODO connect one user
-        // TODO disconnect user
-        // TODO assert still running
-        // TODO disconnect user
-        // TODO assert turned off
+    public void getAsManyConnectionClosedAsClientsDisconnect() throws Exception {
+        int port = 8900;
+
+        RPCImplementer serverImplementer = getClientMock(null);
+        RPCImplementer clientImplementer = mock(RPCImplementer.class);
+
+        RPCImplementerFactory serverImplementerFactory = mock(RPCImplementerFactory.class);
+        when(serverImplementerFactory.build()).thenReturn(serverImplementer);
+
+        RPCImplementerFactory clientImplementerFactory = mock(RPCImplementerFactory.class);
+        when(clientImplementerFactory.build()).thenReturn(clientImplementer);
+
+        RPC server = null,
+                serverEndpointForClient2 = null,
+                client1 = null,
+                client2 = null;
+        Thread serverThread = null,
+                serverSecondThread = null,
+                client1Thread = null,
+                client2Thread = null;
+        try {
+            server = new RPCFactory().build(serverImplementerFactory, new ServerSocketChannelFactory("127.0.0.1", port));
+            serverEndpointForClient2 = new RPCFactory().build(serverImplementerFactory, server);
+            client1 = new RPCFactory().build(clientImplementerFactory, new ClientSocketChannelFactory("127.0.0.1", port));
+            client2 = new RPCFactory().build(clientImplementerFactory, new ClientSocketChannelFactory("127.0.0.1", port));
+            serverThread = new Thread(server);
+            serverSecondThread = new Thread(serverEndpointForClient2);
+            client1Thread = new Thread(client1);
+            client2Thread = new Thread(client2);
+            serverThread.start();
+            serverSecondThread.start();
+            client1Thread.start();
+            client2Thread.start();
+
+            // wait for them to connect
+            final RPC _server = server,
+                    _serverEndpointForClient2 = serverEndpointForClient2,
+                    _client1 = client1,
+                    _client2 = client2;
+            StateChangeUtils.pollForCondition(() -> _server.isRunning() && _serverEndpointForClient2.isRunning(), 8_000,
+                                            "Couldn't start both server connections");
+
+            final ServerSocketMessageChannel serverSocketMessageChannel = (ServerSocketMessageChannel) getRPCMessageChannel(server);
+            final AtomicBoolean serverClient1ConnectionSocketClosed = new AtomicBoolean(),
+                                serverClient2ConnectionSocketClosed = new AtomicBoolean();
+            final ClientSocketMessageChannel serverClient1ConnectionSocket = getClientSocketChannelListeningForClose(server, serverClient1ConnectionSocketClosed),
+                                            serverClient2ConnectionSocket = getClientSocketChannelListeningForClose(serverEndpointForClient2, serverClient2ConnectionSocketClosed);
+
+            StateChangeUtils.pollForCondition(() -> serverClient1ConnectionSocket.isEndConnected() && serverClient2ConnectionSocket.isEndConnected(), 8_000,
+                                            "Couldn't get both clients connected");
+
+            // disconnect one user
+            System.out.println("[i] Closing client 2...");
+            client2.close();
+            client2Thread.join(8_000);
+            client2Thread = null;
+            StateChangeUtils.pollForCondition(() -> serverClient1ConnectionSocket.isClosed() || serverClient2ConnectionSocket.isClosed(), 8_000,
+                                            "Tried to close one client, but they are both still running");
+            StateChangeUtils.pollForCondition(() -> !_client2.isRunning(), 8_000, "Client 2 is still running");
+            StateChangeUtils.pollForCondition(() -> {
+                synchronized (serverClient2ConnectionSocketClosed) {
+                    return serverClient2ConnectionSocketClosed.get();
+                }
+            }, 6_000, "Expected to get client 2 disconnected event; got nothing instead");
+
+            // assert - server should be still running
+            assertFalse(serverSocketMessageChannel.isClosed(), "Expected server to keep running; got server stopped instead");
+            assertTrue(server.isRunning() ^ serverEndpointForClient2.isRunning(), (server.isRunning() ? "Both server instances are running" : "Server is not running"));
+            assertTrue(client1.isRunning(), "Client 1 is not running");
+
+            // disconnect second user
+            System.out.println("[i] Closing client 1...");
+            client1.close();
+            client1Thread.join(8_000);
+            client1Thread = null;
+            StateChangeUtils.pollForCondition(() -> serverClient1ConnectionSocket.isClosed() && serverClient2ConnectionSocket.isClosed(), 8_000,
+                                            "Couldn't stop both clients");
+            StateChangeUtils.pollForCondition(() -> !_client1.isRunning(), 8_000, "Client 1 is still running");
+            StateChangeUtils.pollForCondition(() -> {
+                        synchronized (serverClient1ConnectionSocketClosed) {
+                            return serverClient1ConnectionSocketClosed.get();
+                        }
+                    }, 6_000, "Expected to get client 1 disconnected event; got nothing instead");
+        } finally {
+            System.out.println("- Clearing resources...");
+            if (server != null) server.close();
+            if (serverEndpointForClient2 != null) serverEndpointForClient2.close();
+            if (client1 != null) client1.close();
+            if (client2 != null) client2.close();
+
+            if (serverThread != null) serverThread.join(8_000);
+            if (serverSecondThread != null) serverSecondThread.join(8_000);
+            if (client1Thread != null) client1Thread.join(8_000);
+            if (client2Thread != null) client2Thread.join(8_000);
+        }
     }
 
     @Test
-    public void reopenAClosedServer() throws Exception {
+    public void allowNewUsersToJoinWhenLastOneDisconnected() throws Exception {
         // TODO launch server
         // TODO connect one user
         // TODO disconnect user
