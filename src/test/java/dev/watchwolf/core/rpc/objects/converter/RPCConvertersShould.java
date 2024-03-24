@@ -74,7 +74,7 @@ public class RPCConvertersShould {
                 'S', 'p', 'i', 'g', 'o', 't'
         });
 
-        String got = converters.unmarshall(data, RPCString.class).getObject();
+        String got = converters.unmarshall(data, String.class);
 
         assertEquals("Spigot", got);
     }

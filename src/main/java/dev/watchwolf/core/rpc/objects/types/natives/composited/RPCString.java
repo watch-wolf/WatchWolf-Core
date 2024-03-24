@@ -45,7 +45,7 @@ public class RPCString extends NativeTypeRPCObject<String> {
         @Override
         protected RPCString performUnmarshall(MessageChannel channel, ClassType<? extends RPCString> type) throws IOException {
             // strings are arrays of characters
-            RPCArray array = this.getMasterConverter().unmarshall(channel, new TemplateClassType<>(RPCArray.class, /*RPCChar.class*/ Character.class));
+            RPCArray array = (RPCArray)this.getMasterConverter()._unmarshall(channel, new TemplateClassType<>(RPCArray.class, RPCChar.class));
 
             // convert to string
             final StringBuilder sb = new StringBuilder();

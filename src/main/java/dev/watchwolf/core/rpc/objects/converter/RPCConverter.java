@@ -78,9 +78,13 @@ public class RPCConverter<T extends RPCObject> {
         return this.unwrap(obj, ClassTypeFactory.getType(type));
     }
 
-    protected RPCObject _unmarshall(ChannelQueue channel, ClassType<? extends RPCObject> rpcType) throws IOException {
+    public RPCObject _unmarshall(MessageChannel channel, ClassType<? extends RPCObject> rpcType) throws IOException {
+        ChannelQueue queuedChannel;
+        if (channel instanceof ChannelQueue) queuedChannel = (ChannelQueue)channel;
+        else queuedChannel = new ChannelQueue(channel);
+
         if (this.canLocallyUnwrap(rpcType)) {
-            ChannelEmu emulatedChannel = new ChannelEmu(channel);
+            ChannelEmu emulatedChannel = new ChannelEmu(queuedChannel);
             try {
                 return this.performUnmarshall(emulatedChannel, (ClassType<? extends T>) rpcType);
             } catch (UnsupportedOperationException ignore) {
@@ -93,7 +97,7 @@ public class RPCConverter<T extends RPCObject> {
             if (!subconverter.canUnwrap(rpcType)) continue; // this sub-class doesn't implement the type
 
             try {
-                return subconverter._unmarshall(channel, rpcType);
+                return subconverter._unmarshall(queuedChannel, rpcType);
             } catch (UnsupportedOperationException ignore) {} // false positive
         }
 
@@ -103,12 +107,7 @@ public class RPCConverter<T extends RPCObject> {
 
     public <O> O unmarshall(MessageChannel channel, ClassType<O> type) throws IOException {
         ClassType<? extends RPCObject> rpcType = this.getRPCWrapClass(type);
-
-        ChannelQueue queuedChannel;
-        if (channel instanceof ChannelQueue) queuedChannel = (ChannelQueue)channel;
-        else queuedChannel = new ChannelQueue(channel);
-
-        RPCObject unmarshalledRpcObject = this._unmarshall(queuedChannel, rpcType);
+        RPCObject unmarshalledRpcObject = this._unmarshall(channel, rpcType);
         return this.unwrap(unmarshalledRpcObject, type);
     }
 
