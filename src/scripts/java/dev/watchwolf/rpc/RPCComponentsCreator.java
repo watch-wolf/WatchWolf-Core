@@ -163,20 +163,12 @@ public class RPCComponentsCreator {
                 if (content.getType().startsWith("_")) continue; // internal use
 
                 ClassType<?> nativeType = TypeToRPCType.getType(content.getType());
-                ClassType<? extends RPCObject> rpcType = TypeToRPCType.getRPCType(nativeType);
-                if (nativeType == null || rpcType == null) throw new RuntimeException("Couldn't get the type of '" + content.getType() + "'");
-                String unmarshallClassParam = TypeToRPCType.typeToName(rpcType) + ".class",
-                        getObjectCall = ".getObject()";
-                boolean forceCast = false;
-                if (rpcType instanceof TemplateClassType) {
-                    unmarshallClassParam = ClassTypeFactory.class.getName() + ".getTemplateType(" + rpcType.getName() /* don't use `typeToName` here; we need the raw class */ + ".class, " + TypeToRPCType.typeToName(((TemplateClassType)rpcType).getSubtype()) + ".class)";
-                    getObjectCall = "\n\t\t\t\t\t.getObject(converter, " + ((TemplateClassType)nativeType).getSubtype().getName() + ".class)";
+                if (nativeType == null) throw new RuntimeException("Couldn't get the type of '" + content.getType() + "'");
+                String unmarshallClassParam = TypeToRPCType.typeToName(nativeType) + ".class";
+                if (nativeType instanceof TemplateClassType) {
+                    unmarshallClassParam = ClassTypeFactory.class.getName() + ".getTemplateType(" + nativeType.getName() /* don't use `typeToName` here; we need the raw class */ + ".class, " + ((TemplateClassType)nativeType).getSubtype().getName() + ".class)";
                 }
-                if (rpcType.getClassType().isAssignableFrom(RPCEnum.class)) {
-                    getObjectCall = "\n\t\t\t\t\t.getObject(" + TypeToRPCType.typeToName(nativeType) + ".class)";
-                    forceCast = true;
-                }
-                classMethod.addContent("\t" + TypeToRPCType.typeToName(nativeType) + " " + content.getVariableName() + " = " + (forceCast ? ("(" + TypeToRPCType.typeToName(nativeType) + ")") : "") + "converter.unmarshall(channel, " + unmarshallClassParam + ")" + getObjectCall + ";");
+                classMethod.addContent("\t" + TypeToRPCType.typeToName(nativeType) + " " + content.getVariableName() + " = " + "converter.unmarshall(channel, " + unmarshallClassParam + ");");
                 params.append(content.getVariableName()).append(", ");
             }
             if (params.length() > 0) {

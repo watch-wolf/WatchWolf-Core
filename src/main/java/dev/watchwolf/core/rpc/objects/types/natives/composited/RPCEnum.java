@@ -24,7 +24,7 @@ public class RPCEnum extends RPCObjectWrapper<Enum<?>> {
         super(null);
 
         // we send the data as integer
-        this.sendObject = new RPCShort((short)object.ordinal());
+        this.sendObject = new RPCShort(index);
     }
 
     @Override

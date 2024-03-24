@@ -83,16 +83,12 @@ Once a 'start server' request is received the program should create a server wit
 If it's not possible to create it (for example: one argument is invalid, the user sent a plugin when it's specified that only Usual Plugins are allowed, or there's no free servers of that type), then an empty string is returned.
 */
 private void startServer(dev.watchwolf.core.rpc.channel.MessageChannel channel, dev.watchwolf.core.rpc.objects.converter.RPCConverter<?> converter) throws java.io.IOException {
-	java.lang.String serverType = converter.unmarshall(channel, dev.watchwolf.core.rpc.objects.types.natives.composited.RPCString.class).getObject();
-	java.lang.String serverVersion = converter.unmarshall(channel, dev.watchwolf.core.rpc.objects.types.natives.composited.RPCString.class).getObject();
-	java.util.Collection<dev.watchwolf.core.entities.files.plugins.Plugin> plugins = converter.unmarshall(channel, dev.watchwolf.core.rpc.objects.converter.class_type.ClassTypeFactory.getTemplateType(dev.watchwolf.core.rpc.objects.types.natives.composited.RPCArray.class, dev.watchwolf.core.rpc.objects.types.custom.files.plugins.RPCPlugin.class))
-					.getObject(converter, dev.watchwolf.core.entities.files.plugins.Plugin.class);
-	dev.watchwolf.core.entities.WorldType worldType = (dev.watchwolf.core.entities.WorldType)converter.unmarshall(channel, dev.watchwolf.core.rpc.objects.types.natives.composited.RPCEnum.class)
-					.getObject(dev.watchwolf.core.entities.WorldType.class);
-	java.util.Collection<dev.watchwolf.core.entities.files.ConfigFile> maps = converter.unmarshall(channel, dev.watchwolf.core.rpc.objects.converter.class_type.ClassTypeFactory.getTemplateType(dev.watchwolf.core.rpc.objects.types.natives.composited.RPCArray.class, dev.watchwolf.core.rpc.objects.types.custom.files.RPCConfigFile.class))
-					.getObject(converter, dev.watchwolf.core.entities.files.ConfigFile.class);
-	java.util.Collection<dev.watchwolf.core.entities.files.ConfigFile> configFiles = converter.unmarshall(channel, dev.watchwolf.core.rpc.objects.converter.class_type.ClassTypeFactory.getTemplateType(dev.watchwolf.core.rpc.objects.types.natives.composited.RPCArray.class, dev.watchwolf.core.rpc.objects.types.custom.files.RPCConfigFile.class))
-					.getObject(converter, dev.watchwolf.core.entities.files.ConfigFile.class);
+	java.lang.String serverType = converter.unmarshall(channel, java.lang.String.class);
+	java.lang.String serverVersion = converter.unmarshall(channel, java.lang.String.class);
+	java.util.Collection<dev.watchwolf.core.entities.files.plugins.Plugin> plugins = converter.unmarshall(channel, dev.watchwolf.core.rpc.objects.converter.class_type.ClassTypeFactory.getTemplateType(java.util.Collection.class, dev.watchwolf.core.entities.files.plugins.Plugin.class));
+	dev.watchwolf.core.entities.WorldType worldType = converter.unmarshall(channel, dev.watchwolf.core.entities.WorldType.class);
+	java.util.Collection<dev.watchwolf.core.entities.files.ConfigFile> maps = converter.unmarshall(channel, dev.watchwolf.core.rpc.objects.converter.class_type.ClassTypeFactory.getTemplateType(java.util.Collection.class, dev.watchwolf.core.entities.files.ConfigFile.class));
+	java.util.Collection<dev.watchwolf.core.entities.files.ConfigFile> configFiles = converter.unmarshall(channel, dev.watchwolf.core.rpc.objects.converter.class_type.ClassTypeFactory.getTemplateType(java.util.Collection.class, dev.watchwolf.core.entities.files.ConfigFile.class));
 
 	java.lang.String ip = this.runner.startServer(serverType, serverVersion, plugins, worldType, maps, configFiles);
 

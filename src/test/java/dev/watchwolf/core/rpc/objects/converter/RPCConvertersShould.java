@@ -1,5 +1,6 @@
 package dev.watchwolf.core.rpc.objects.converter;
 
+import dev.watchwolf.core.entities.WorldType;
 import dev.watchwolf.core.entities.files.ConfigFile;
 import dev.watchwolf.core.entities.files.ZipFile;
 import dev.watchwolf.core.entities.files.plugins.Plugin;
@@ -77,6 +78,20 @@ public class RPCConvertersShould {
         String got = converters.unmarshall(data, String.class);
 
         assertEquals("Spigot", got);
+    }
+
+    @Test
+    public void unmarshallEnums() throws Exception {
+        RPCObjectsConverterFactory factory = new RPCObjectsConverterFactory();
+        RPCConverter<?> converters = factory.build();
+
+        MessageChannel data = new MessageChannelMock(new byte[]{
+                0x01, 0x00, // WorldType.FLAT is index 1
+        });
+
+        WorldType got = converters.unmarshall(data, WorldType.class);
+
+        assertEquals(WorldType.FLAT, got);
     }
 
     @Test
