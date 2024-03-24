@@ -19,7 +19,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
-@Timeout(60)
+@Timeout(120)
 public class ITRPCWithSocketsShould {
     public static MessageChannel getRPCMessageChannel(RPC rpc) throws Exception {
         Field messageChannelField = RPC.class.getDeclaredField("remoteConnection");

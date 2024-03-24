@@ -56,7 +56,7 @@ public class ClientSocketMessageChannel extends SocketMessageChannel {
 
                     try {
                         byte[] r = new byte[numBytes];
-                        segmentedRead(dis, r, timeout);
+                        segmentedRead(dis, r);
                         _this.connectedEnd = true; // end is connected
                         return r;
                     } catch (SocketTimeoutException ex) {
@@ -137,17 +137,14 @@ public class ClientSocketMessageChannel extends SocketMessageChannel {
         return this.byteQueue.get(numBytes, timeout);
     }
 
-    private int segmentedRead(DataInputStream dis, byte []r, int timeout) throws IOException,SocketTimeoutException {
+    private int segmentedRead(DataInputStream dis, byte []r) throws IOException,SocketTimeoutException {
         int outBytes = 0, tmp;
         int numBytes = r.length;
 
         while (numBytes > 0) {
             byte []chunk = new byte[Math.min(numBytes, MAX_SOCKET_MESSAGE_LENGTH)];
-            long startingAt = System.currentTimeMillis();
-            do {
-                tmp = dis.read(chunk);
-            } while (tmp == -1 && (System.currentTimeMillis() - startingAt) < timeout); // keep trying if EOF
-            if (tmp < 1) throw new IOException("Couldn't read chunk of " + chunk.length + " bytes (in " + timeout + "ms)");
+            tmp = dis.read(chunk);
+            if (tmp < 1) throw new IOException("Couldn't read chunk of " + chunk.length + " bytes (read " + tmp + " instead)");
 
             System.arraycopy(chunk, 0, r, outBytes, tmp);
 
