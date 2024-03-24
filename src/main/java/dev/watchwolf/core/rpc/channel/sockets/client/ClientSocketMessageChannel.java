@@ -56,7 +56,7 @@ public class ClientSocketMessageChannel extends SocketMessageChannel {
 
                     try {
                         byte[] r = new byte[numBytes];
-                        segmentedRead(dis, r);
+                        segmentedRead(dis, r, timeout);
                         _this.connectedEnd = true; // end is connected
                         return r;
                     } catch (SocketTimeoutException ex) {
@@ -137,27 +137,22 @@ public class ClientSocketMessageChannel extends SocketMessageChannel {
         return this.byteQueue.get(numBytes, timeout);
     }
 
-    private int segmentedRead(DataInputStream dis, byte []r) throws IOException,SocketTimeoutException {
+    private int segmentedRead(DataInputStream dis, byte []r, int timeout) throws IOException,SocketTimeoutException {
         int outBytes = 0, tmp;
         int numBytes = r.length;
 
-        if (numBytes <= MAX_SOCKET_MESSAGE_LENGTH) {
-            // we can read it in one try
-            outBytes = dis.read(r);
-            if (outBytes != numBytes) throw new IOException("Couldn't read " + numBytes + " bytes (read " + outBytes + " instead)");
-        }
-        else {
-            // too big; we need to split it
-            while (numBytes > 0) {
-                byte []chunk = new byte[Math.min(numBytes, MAX_SOCKET_MESSAGE_LENGTH)];
+        while (numBytes > 0) {
+            byte []chunk = new byte[Math.min(numBytes, MAX_SOCKET_MESSAGE_LENGTH)];
+            long startingAt = System.currentTimeMillis();
+            do {
                 tmp = dis.read(chunk);
-                if (tmp != chunk.length) throw new IOException("Couldn't read chunk of " + chunk.length + " bytes (read " + tmp + " instead)");
+            } while (tmp == -1 && (System.currentTimeMillis() - startingAt) < timeout); // keep trying if EOF
+            if (tmp < 1) throw new IOException("Couldn't read chunk of " + chunk.length + " bytes (in " + timeout + "ms)");
 
-                System.arraycopy(chunk, 0, r, outBytes, chunk.length);
+            System.arraycopy(chunk, 0, r, outBytes, tmp);
 
-                outBytes += tmp;
-                numBytes -= MAX_SOCKET_MESSAGE_LENGTH; // it doesn't matter if `numBytes` is negative; we only check if there's something left to read
-            }
+            outBytes += tmp;
+            numBytes -= tmp;
         }
 
         return outBytes;

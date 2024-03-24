@@ -399,10 +399,10 @@ public class ITRPCWithSocketsShould {
                                             "Tried to close one client, but they are both still running");
             StateChangeUtils.pollForCondition(() -> !_client2.isRunning(), 8_000, "Client 2 is still running");
             StateChangeUtils.pollForCondition(() -> {
-                synchronized (serverClient2ConnectionSocketClosed) {
-                    return serverClient2ConnectionSocketClosed.get();
-                }
-            }, 6_000, "Expected to get client 2 disconnected event; got nothing instead");
+                        synchronized (serverClient2ConnectionSocketClosed) {
+                            return serverClient2ConnectionSocketClosed.get();
+                        }
+                    }, 12_000, "Expected to get client 2 disconnected event; got nothing instead");
 
             // assert - server should be still running
             assertFalse(serverSocketMessageChannel.isClosed(), "Expected server to keep running; got server stopped instead");
@@ -421,7 +421,7 @@ public class ITRPCWithSocketsShould {
                         synchronized (serverClient1ConnectionSocketClosed) {
                             return serverClient1ConnectionSocketClosed.get();
                         }
-                    }, 6_000, "Expected to get client 1 disconnected event; got nothing instead");
+                    }, 12_000, "Expected to get client 1 disconnected event; got nothing instead");
         } finally {
             System.out.println("- Clearing resources...");
             if (server != null) server.close();
