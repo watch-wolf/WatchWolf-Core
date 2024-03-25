@@ -1,7 +1,9 @@
 package dev.watchwolf.core.entities.files;
 
 import java.io.*;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
@@ -21,34 +23,36 @@ public class ZipFile extends ConfigFile {
         if (!this.getExtension().equals("zip")) throw new IllegalArgumentException("Only zip files are allowed to be this type!");
     }
 
-    public void exportToDirectory(File f) throws IOException, RuntimeException {
-        Files.createDirectories(f.toPath()); // create the directory (if not exists)
+    public void exportToDirectory(Path f) throws IOException, RuntimeException {
+        Files.createDirectories(f); // create the directory (if not exists)
 
         // export zip
         // @author https://www.baeldung.com/java-compress-and-uncompress
         ZipInputStream zis = new ZipInputStream(new ByteArrayInputStream(this.getData()));
         ZipEntry zipEntry = zis.getNextEntry();
         byte[] buffer = new byte[1024];
+        char[] charBuffer;
         while (zipEntry != null) {
-            File newFile = newFile(f, zipEntry);
+            Path newFile = newFile(f, zipEntry);
             if (zipEntry.isDirectory()) {
-                if (!newFile.isDirectory() && !newFile.mkdirs()) {
-                    throw new IOException("Failed to create directory " + newFile);
+                if (!Files.isDirectory(newFile)) {
+                    Files.createDirectories(newFile);
                 }
             } else {
                 // fix for Windows-created archives
-                File parent = newFile.getParentFile();
-                if (!parent.isDirectory() && !parent.mkdirs()) {
-                    throw new IOException("Failed to create directory " + parent);
+                Path parent = newFile.getParent();
+                if (!Files.isDirectory(parent)) {
+                    Files.createDirectories(parent);
                 }
 
                 // write file content
-                FileOutputStream fos = new FileOutputStream(newFile);
-                int len;
-                while ((len = zis.read(buffer)) > 0) {
-                    fos.write(buffer, 0, len);
+                try(BufferedWriter fos = Files.newBufferedWriter(newFile)) {
+                    int len;
+                    while ((len = zis.read(buffer)) > 0) {
+                        charBuffer = new String(buffer, StandardCharsets.UTF_8).toCharArray();
+                        fos.write(charBuffer, 0, len);
+                    }
                 }
-                fos.close();
             }
             zipEntry = zis.getNextEntry();
         }
@@ -58,13 +62,10 @@ public class ZipFile extends ConfigFile {
     }
 
     // @author https://www.baeldung.com/java-compress-and-uncompress
-    private static File newFile(File destinationDir, ZipEntry zipEntry) throws IOException {
-        File destFile = new File(destinationDir, zipEntry.getName());
+    private static Path newFile(Path destinationDir, ZipEntry zipEntry) throws IOException {
+        Path destFile = destinationDir.resolve(zipEntry.getName());
 
-        String destDirPath = destinationDir.getCanonicalPath();
-        String destFilePath = destFile.getCanonicalPath();
-
-        if (!destFilePath.startsWith(destDirPath + File.separator)) {
+        if (!destFile.startsWith(destinationDir)) {
             throw new IOException("Entry is outside of the target dir: " + zipEntry.getName());
         }
 

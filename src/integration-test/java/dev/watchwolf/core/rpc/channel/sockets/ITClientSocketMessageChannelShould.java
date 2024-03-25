@@ -1,6 +1,5 @@
 package dev.watchwolf.core.rpc.channel.sockets;
 
-import dev.watchwolf.core.rpc.channel.ChannelQueue;
 import dev.watchwolf.core.rpc.channel.MessageChannel;
 import dev.watchwolf.core.rpc.channel.sockets.client.ClientSocketChannelFactory;
 import dev.watchwolf.core.rpc.channel.sockets.client.ClientSocketMessageChannel;

@@ -107,6 +107,3 @@ Temporary Items
 
 .idea/*
 target/*
-
-# tests tmp folder
-test-out/*

@@ -1,5 +1,7 @@
 package dev.watchwolf.core.rpc.objects.converter;
 
+import com.google.common.jimfs.Configuration;
+import com.google.common.jimfs.Jimfs;
 import dev.watchwolf.core.entities.WorldType;
 import dev.watchwolf.core.entities.files.ConfigFile;
 import dev.watchwolf.core.entities.files.ZipFile;
@@ -17,9 +19,12 @@ import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Scanner;
+import java.nio.file.FileSystem;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.*;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -96,56 +101,82 @@ public class RPCConvertersShould {
 
     @Test
     public void exportZipFiles() throws Exception {
-        // TODO refactor using FS mock com.google.jimfs:jimfs
-        File outPath = new File("test-out/");
-        HashMap<String,String> zipContents = new HashMap<>();
-        zipContents.put("file1.txt", "This is the file 1.");
-        zipContents.put("file2.txt", "This is the file 2.");
+        try (FileSystem fs = Jimfs.newFileSystem(Configuration.unix())) {
+            Path outPath = fs.getPath("/test-out");
+            Files.createDirectory(outPath);
+
+            HashMap<String, String> zipContents = new HashMap<>();
+            zipContents.put("file1.txt", "This is the file 1.");
+            zipContents.put("file2.txt", "This is the file 2.");
 
 
-        // delete the contents (if any)
-        String[]entries = outPath.list();
-        if (entries != null) {
-            for (String s : entries) {
-                File currentFile = new File(outPath.getPath(), s);
-                currentFile.delete();
+            RPCObjectsConverterFactory factory = new RPCObjectsConverterFactory();
+            RPCConverter<?> converters = factory.build();
+
+            ZipFile file = new ZipFile("src/test/resources/zip_file_with_two_files.zip", "./");
+
+            RPCObject wrappedObject = converters.wrap(file);
+            assertTrue(wrappedObject instanceof RPCConfigFile);
+            Object unwrappedObject = converters.unwrap(wrappedObject, ConfigFile.class);
+            assertEquals(file.getClass(), unwrappedObject.getClass()); // even after unwrapping as a ConfigFile, we're getting a ZipFile
+
+            // export
+            ZipFile got = (ZipFile) unwrappedObject;
+            got.exportToDirectory(outPath);
+
+            // validate the results
+            List<Path> entries = Files.list(outPath).collect(Collectors.toList());
+            assertEquals(zipContents.size(), entries.size(), "Expected only " + zipContents.size() + " file in the output folder; got " + entries.size() + " instead: " + entries.toString());
+            for (Path e : entries) {
+                String fileName = e.getFileName().toString();
+                String expecting = zipContents.get(fileName);
+                assertNotEquals(null, expecting, "Couldn't find file " + fileName);
+                assertEquals(expecting, readFile(e)); // does the files contains the same as expected?
             }
-        }
-
-
-        RPCObjectsConverterFactory factory = new RPCObjectsConverterFactory();
-        RPCConverter<?> converters = factory.build();
-
-        ZipFile file = new ZipFile("src/test/resources/zip_file_with_two_files.zip", "./");
-
-        RPCObject wrappedObject = converters.wrap(file);
-        assertTrue(wrappedObject instanceof RPCConfigFile);
-        Object unwrappedObject = converters.unwrap(wrappedObject, ConfigFile.class);
-        assertEquals(file.getClass(), unwrappedObject.getClass()); // even after unwrapping as a ConfigFile, we're getting a ZipFile
-
-        // export
-        ZipFile got = (ZipFile)unwrappedObject;
-        got.exportToDirectory(outPath);
-
-        // validate the results
-        entries = outPath.list();
-        assertNotEquals(null, entries);
-        assertEquals(zipContents.size(), entries.length); // we expect only those files
-        for (String e : entries) {
-            String expecting = zipContents.get(e);
-            assertNotEquals(null, expecting, "Couldn't find file " + e);
-            assertEquals(expecting, readFile(new File(outPath.getPath(), e))); // does the files contains the same as expected?
         }
     }
 
-    private static String readFile(File f) throws IOException {
-        StringBuilder sb = new StringBuilder();
-        Scanner myReader = new Scanner(f);
-        while (myReader.hasNextLine()) {
-            String data = myReader.nextLine();
-            sb.append(data);
+    @Test
+    public void exportZipFileWithBinaryData() throws Exception {
+        try (FileSystem fs = Jimfs.newFileSystem(Configuration.unix())) {
+            Path outPath = fs.getPath("/test-out");
+            Files.createDirectory(outPath);
+
+            HashMap<String, byte[]> zipContents = new HashMap<>();
+            zipContents.put("file1.bin", new byte[]{0, 1, 2, 3, 4, 5});
+
+
+            RPCObjectsConverterFactory factory = new RPCObjectsConverterFactory();
+            RPCConverter<?> converters = factory.build();
+
+            ZipFile file = new ZipFile("src/test/resources/zip_file_with_a_binary_file.zip", "./");
+
+            RPCObject wrappedObject = converters.wrap(file);
+            assertTrue(wrappedObject instanceof RPCConfigFile);
+            Object unwrappedObject = converters.unwrap(wrappedObject, ConfigFile.class);
+            assertEquals(file.getClass(), unwrappedObject.getClass()); // even after unwrapping as a ConfigFile, we're getting a ZipFile
+
+            // export
+            ZipFile got = (ZipFile) unwrappedObject;
+            got.exportToDirectory(outPath);
+
+            // validate the results
+            List<Path> entries = Files.list(outPath).collect(Collectors.toList());
+            assertEquals(zipContents.size(), entries.size(), "Expected only " + zipContents.size() + " file in the output folder; got " + entries.size() + " instead: " + entries.toString());
+            for (Path e : entries) {
+                String fileName = e.getFileName().toString();
+                byte[] expecting = zipContents.get(fileName);
+                assertNotEquals(null, expecting, "Couldn't find file " + fileName);
+                assertArrayEquals(expecting, readBinaryFile(e)); // does the files contains the same as expected?
+            }
         }
-        myReader.close();
-        return sb.toString();
+    }
+
+    private static String readFile(Path f) throws IOException {
+        return String.join("\n", Files.readAllLines(f));
+    }
+
+    private static byte []readBinaryFile(Path f) throws IOException {
+        return Files.readAllBytes(f);
     }
 }

@@ -36,11 +36,20 @@ if [ $unit -eq 1 ]; then
     mkdir -p "$unit_tests_report_path"
 
     # run unit tests
-    docker run -it --rm -v "$base_path":/compile -v "$local_maven_repos_path":/root/.m2 maven:3.8.4-openjdk-8               \
-                    mvn test -DskipTests=false -DskipUTs=false -DskipITs=true                                               \
-                    -Dmaven.test.redirectTestOutputToFile=true -X --file '/compile'                                         \
-            2>&1 | tee "$unit_tests_report_path/docker-log.txt" # forward to file
-    result=$?
+    if [ ! -z "$test_match" ]; then
+        echo "[v] Running filtered tests: $test_match"
+        docker run -it --rm -v "$base_path":/compile -v "$local_maven_repos_path":/root/.m2 maven:3.8.4-openjdk-8               \
+                        mvn test -DskipTests=false -DskipUTs=false -DskipITs=true                                               \
+                        -Dmaven.test.redirectTestOutputToFile=true -Dtest="$test_match" -X --file '/compile'                    \
+                2>&1 | tee "$unit_tests_report_path/docker-log.txt" # forward to file
+        result=$?
+    else
+        docker run -it --rm -v "$base_path":/compile -v "$local_maven_repos_path":/root/.m2 maven:3.8.4-openjdk-8               \
+                        mvn test -DskipTests=false -DskipUTs=false -DskipITs=true                                               \
+                        -Dmaven.test.redirectTestOutputToFile=true -X --file '/compile'                                         \
+                2>&1 | tee "$unit_tests_report_path/docker-log.txt" # forward to file
+        result=$?
+    fi
 
     # Convert xml reports into html
     docker run -it --rm -v "$base_path":/compile -v "$local_maven_repos_path":/root/.m2 maven:3.8.3-openjdk-17 mvn surefire-report:report-only --file '/compile'
