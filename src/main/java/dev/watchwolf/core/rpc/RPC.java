@@ -62,9 +62,7 @@ public class RPC implements Runnable, Closeable {
             try {
                 while (!this.linkedConnection.areBytesAvailable()) Thread.sleep(200); // TODO use notify
                 this.localImplementation.forwardCall(this.linkedConnection, this.converter);
-            } catch (IOException | InterruptedException ex) {
-                ex.printStackTrace();
-            }
+            } catch (IOException | InterruptedException ex) { }
 
             try {
                 Thread.sleep(200); // give it some break

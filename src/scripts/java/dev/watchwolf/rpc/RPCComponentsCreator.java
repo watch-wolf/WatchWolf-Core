@@ -1,10 +1,9 @@
 package dev.watchwolf.rpc;
 
 import de.dev.eth0.jcodegen.constants.Modifier;
-import de.dev.eth0.jcodegen.elements.Field;
-import de.dev.eth0.jcodegen.elements.JavaClass;
-import de.dev.eth0.jcodegen.elements.Method;
-import de.dev.eth0.jcodegen.elements.Parameter;
+import de.dev.eth0.jcodegen.elements.*;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import dev.watchwolf.core.rpc.RPC;
 import dev.watchwolf.core.rpc.RPCImplementer;
 import dev.watchwolf.core.rpc.channel.MessageChannel;
@@ -13,7 +12,6 @@ import dev.watchwolf.core.rpc.objects.converter.class_type.ClassType;
 import dev.watchwolf.core.rpc.objects.converter.class_type.ClassTypeFactory;
 import dev.watchwolf.core.rpc.objects.converter.class_type.TemplateClassType;
 import dev.watchwolf.core.rpc.objects.types.RPCObject;
-import dev.watchwolf.core.rpc.objects.types.natives.composited.RPCEnum;
 import dev.watchwolf.core.rpc.objects.types.natives.composited.RPCString;
 import dev.watchwolf.core.rpc.objects.types.natives.primitive.RPCByte;
 import dev.watchwolf.rpc.definitions.Content;
@@ -24,8 +22,10 @@ import dev.watchwolf.rpc.definitions.WatchWolfComponent;
 import java.io.BufferedWriter;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -46,6 +46,13 @@ public class RPCComponentsCreator {
         localForwardMethod.addModifier(Modifier.PUBLIC);
         clazz.addElement(localForwardMethod);
 
+        // Logger
+        Field loggerNode = new Field(Logger.class.getName(), "logger");
+        loggerNode.addModifier(Modifier.PRIVATE);
+        loggerNode.addModifier(Modifier.FINAL);
+        loggerNode.addCommentLine("Used to trace method enter/exit");
+        clazz.addField(loggerNode);
+
         // RPC node
         Field rpcNode = new Field(RPC.class.getName(), "rpc");
         rpcNode.addModifier(Modifier.PRIVATE);
@@ -54,10 +61,17 @@ public class RPCComponentsCreator {
         Method setRPCMethod = new Method(void.class, "setHandler");
         setRPCMethod.addParameter(new Parameter(RPC.class.getName(), "handler"));
         setRPCMethod.addModifier(Modifier.PUBLIC);
+        setRPCMethod.addContent("\tthis.logger.traceEntry(null, handler);");
         setRPCMethod.addContent("\tthis.rpc = handler;");
+        setRPCMethod.addContent("\tthis.logger.traceExit();");
 
         clazz.addElement(setRPCMethod);
         clazz.addField(rpcNode);
+
+        // constructor
+        Constructor constructor = new Constructor(localName);
+        constructor.addContent("\tthis.logger = " + LogManager.class.getName() + ".getLogger(\"" + pckge + "." + localName + "\");");
+        clazz.addElement(constructor);
 
         // Runner node
         Field runnerNode = new Field(runners[0], "runner");
@@ -67,7 +81,9 @@ public class RPCComponentsCreator {
         Method setRunnerMethod = new Method(void.class, "setRunner");
         setRunnerMethod.addParameter(new Parameter(runners[0], "runner"));
         setRunnerMethod.addModifier(Modifier.PUBLIC);
+        setRunnerMethod.addContent("\tthis.logger.traceEntry(null, runner);");
         setRunnerMethod.addContent("\tthis.runner = runner;");
+        setRunnerMethod.addContent("\tthis.logger.traceExit();");
 
         clazz.addElement(setRunnerMethod);
         clazz.addField(runnerNode);
@@ -81,17 +97,30 @@ public class RPCComponentsCreator {
                                 .findFirst().orElse(null);
     }
 
+    /**
+     * Gets the properties that an event sends
+     * @param event Event to extract the information
+     * @return list of tuple (argument type,(variable name, description))
+     */
+    private static List<Map.Entry<String,Map.Entry<String, String>>> getEventArguments(Event event) {
+        List<Map.Entry<String,Map.Entry<String, String>>> arguments = new ArrayList<>();
+        for (Content content : event.getContents()) {
+            if (content.getType().startsWith("_")) continue; // internal use
+
+            arguments.add(new AbstractMap.SimpleEntry<>(TypeToRPCType.typeToName(TypeToRPCType.getType(content.getType())), new AbstractMap.SimpleEntry<>(content.getVariableName(), content.getDescription())));
+        }
+        return arguments;
+    }
+
     private static Method getInterfaceEventMethod(Event event) {
         Method interfaceMethod = new Method(void.class, event.getFunctionName());
 
         interfaceMethod.addCommentLine(event.getDescription());
         if (event.getRelatesTo() != null) interfaceMethod.addCommentLine("Relates to `" + event.getRelatesTo() + "` method");
 
-        for (Content content : event.getContents()) {
-            if (content.getType().startsWith("_")) continue; // internal use
-
-            Parameter param = new Parameter(TypeToRPCType.typeToName(TypeToRPCType.getType(content.getType())), content.getVariableName());
-            if (content.getDescription() != null) interfaceMethod.addCommentLine("@param " + content.getVariableName() + ": " + content.getDescription());
+        for (Map.Entry<String,Map.Entry<String,String>> argument : getEventArguments(event)) {
+            Parameter param = new Parameter(argument.getKey(), argument.getValue().getKey());
+            if (argument.getValue().getValue() != null) interfaceMethod.addCommentLine("@param " + argument.getValue().getKey() + ": " + argument.getValue().getValue());
             interfaceMethod.addParameter(param);
         }
 
@@ -176,7 +205,9 @@ public class RPCComponentsCreator {
                 classMethod.addContent(""); // leave some space
             }
             String varAssignation = (returnType == null) ? "" : (TypeToRPCType.typeToName(TypeToRPCType.getType(returnType.getType())) + " " + returnType.getVariableName() + " = ");
-            classMethod.addContent("\t" + varAssignation + "this.runner." + petitions.get(n).getFunctionName() + "(" + params.toString() + ");");
+            classMethod.addContent("\tthis.logger.traceEntry(" + ((params.length() == 0) ? "" : ("null, " + params.toString())) + ");")
+                        .addContent("\t" + varAssignation + "this.runner." + petitions.get(n).getFunctionName() + "(" + params.toString() + ");")
+                        .addContent("\tthis.logger.traceExit(" + ((returnType == null) ? "" : returnType.getVariableName()) + ");");
 
             if (returnType != null) {
                 // header
@@ -252,26 +283,29 @@ public class RPCComponentsCreator {
         if (!operation.getType().equals("_operation")) throw new IllegalArgumentException("Event must have a first content of type '_operation'");
         arguments = arguments.subList(1, arguments.size());
 
-        int header_lsb = component.getDestinyId() | 0b0000_1_000
-                            | ((((Number)operation.getValue()).intValue() & 0b1111) << 4),
-            header_msb = ((Number)operation.getValue()).intValue() >> 4;
+        List<String> sentArguments = new ArrayList<>();
+        for (Map.Entry<String,Map.Entry<String,String>> args : getEventArguments(event)) {
+            sentArguments.add(args.getValue().getKey());
+        }
 
-        sb.append("\tif (this.rpc == null) throw new ").append(RuntimeException.class.getName()).append("(\"Got 'send event' call before RPC instance\");\n")
+        sb.append("\tthis.logger.traceEntry(" + String.join(", ", sentArguments) + ");\n")
+            .append("\tif (this.rpc == null) throw this.logger.throwing(new ").append(RuntimeException.class.getName()).append("(\"Got 'send event' call before RPC instance\"));\n")
             .append("\tsynchronized (this) {\n")
-            .append("\t\tthis.rpc.sendEvent(\n");
+            .append("\t\tthis.rpc.sendEvent(\n")
         // header
-        sb.append("\t\t\t\tnew " + RPCByte.class.getName() + "(" + getLSBOperationByte(component.getDestinyId(), true, operation.getIntValue()) + "),\n");
-        sb.append("\t\t\t\tnew " + RPCByte.class.getName() + "(" + getMSBOperationByte(operation.getIntValue()) + "),\n");
+            .append("\t\t\t\tnew " + RPCByte.class.getName() + "(" + getLSBOperationByte(component.getDestinyId(), true, operation.getIntValue()) + "),\n")
+            .append("\t\t\t\tnew " + RPCByte.class.getName() + "(" + getMSBOperationByte(operation.getIntValue()) + "),\n");
         // arguments
         for (Content arg : arguments) {
             ClassType<? extends RPCObject> rpcArgType = TypeToRPCType.getRPCType(arg.getType());
             if (rpcArgType == null) throw new IllegalArgumentException("Couldn't parse " + arg.getType() + " into RPC!\n");
             sb.append("\t\t\t\tnew " + TypeToRPCType.typeToName(rpcArgType) + "(" + arg.getName() + "),\n");
         }
+        sb.setLength(sb.length()-2); // remove last ',\n'
 
         // done
-        sb.setLength(sb.length()-2); // remove last ',\n'
-        sb.append("\n\t\t);\n\t}");
+        sb.append("\n\t\t);\n\t}\n")
+            .append("\tthis.logger.traceExit();"); // the "return" is set as the argument
 
         return sb.toString();
     }
@@ -342,11 +376,14 @@ public class RPCComponentsCreator {
                             .addParameter(new Parameter(MessageChannel.class.getName(), "channel"))
                             .addParameter(new Parameter(RPCConverter.class.getName() + "<?>", "converter"));
 
+        pLocalForwardMethod.addContent("\tthis.logger.traceEntry(null, origin, isReturn, operation, channel, converter);");
+
         if (component.getName().equals("Servers Manager")) {
             // legacy call
             pLocalForwardMethod.addContent("\tif (origin == 1 /* WW server is the origin */ && isReturn && operation == 2 /* 'server started' return */) {")
                                 .addContent("\t\t// legacy call; read arguments and do nothing")
                                 .addContent("\t\tconverter.unmarshall(channel, " + RPCString.class.getName() + ".class);")
+                                .addContent("\t\tthis.logger.traceExit();")
                                 .addContent("\t\treturn;")
                                 .addContent("\t}");
         }
@@ -354,8 +391,8 @@ public class RPCComponentsCreator {
         // exceptions
         pLocalForwardMethod.addContent("")
                             .addContent("\t// arg guards")
-                            .addContent("\tif (origin != " + component.getDestinyId() + ") throw new " + RuntimeException.class.getName() + "(\"Got a request targeting a different component\");")
-                            .addContent("\tif (isReturn) throw new " + RuntimeException.class.getName() + "(\"Got a return instead of a request\");");
+                            .addContent("\tif (origin != " + component.getDestinyId() + ") throw this.logger.throwing(new " + RuntimeException.class.getName() + "(\"Got a request targeting a different component\"));")
+                            .addContent("\tif (isReturn) throw this.logger.throwing(new " + RuntimeException.class.getName() + "(\"Got a return instead of a request\"));");
 
         // ServersManager needs the source IP to reply
         if (component.getName().equals("Servers Manager")) {
@@ -372,7 +409,8 @@ public class RPCComponentsCreator {
             Method getLatestMessageChannelPetitionNodeMethod = new Method(MessageChannel.class.getName(), "getLatestMessageChannelPetitionNode");
             getLatestMessageChannelPetitionNodeMethod.addModifier(Modifier.PUBLIC);
             getLatestMessageChannelPetitionNodeMethod.addModifier(Modifier.SYNCHRONIZED);
-            getLatestMessageChannelPetitionNodeMethod.addContent("\treturn this." + latestMessageChannelPetitionNode.getName() + ";");
+            getLatestMessageChannelPetitionNodeMethod.addContent("\tthis.logger.traceEntry();");
+            getLatestMessageChannelPetitionNodeMethod.addContent("\treturn this.logger.traceExit(this." + latestMessageChannelPetitionNode.getName() + ");");
             localClass.addElement(getLatestMessageChannelPetitionNodeMethod);
         }
 
@@ -391,20 +429,23 @@ public class RPCComponentsCreator {
         }
         String msg = "\t";
         if (!firstIf) msg += "else ";
-        msg += "throw new " + UnsupportedOperationException.class.getName() + "(\"Got unsupported operation: \" + operation); // no match";
-        pLocalForwardMethod.addContent(msg);
+        msg += "throw this.logger.throwing(new " + UnsupportedOperationException.class.getName() + "(\"Got unsupported operation: \" + operation)); // no match";
+        pLocalForwardMethod.addContent(msg)
+                        .addContent("\tthis.logger.traceExit();");
         localClass.addElement(pLocalForwardMethod);
 
         Method localForwardMethod = getForwardMethod(localClass);
         if (localForwardMethod == null) throw new RuntimeException("Couldn't get the 'forward' method");
-        localForwardMethod.addContent("\tsynchronized (this) {")
+        localForwardMethod.addContent("\tthis.logger.traceEntry();")
+                        .addContent("\tsynchronized (this) {")
                         .addContent("\t\tshort info = converter.unmarshall(channel, Short.class);")
                         .addContent("\t\tbyte origin = (byte)(info & 0b111);")
                         .addContent("\t\tboolean isReturn = (info & 0b1_000) > 0;")
                         .addContent("\t\tshort operation = (short)(info >> 4);")
-                        .addContent()
+                        .addContent("\t\t")
                         .addContent("\t\tthis.forwardCall(origin, isReturn, operation, channel, converter);")
-                        .addContent("\t}");
+                        .addContent("\t}")
+                        .addContent("\tthis.logger.traceExit();");
 
         List<Method> throwableMethods = new ArrayList<>();
         for (Method petition : getClassPetitionMethod(component.getDestinyId(), component.getPetitions())) {

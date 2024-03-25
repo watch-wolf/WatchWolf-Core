@@ -8,12 +8,14 @@ import dev.watchwolf.core.rpc.objects.converter.class_type.ClassTypeFactory;
 import dev.watchwolf.core.rpc.objects.converter.class_type.TemplateClassType;
 import dev.watchwolf.core.rpc.objects.types.RPCObject;
 
-import javax.naming.InsufficientResourcesException;
+import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
 public class RPCConverter<T extends RPCObject> {
+    private final Logger logger = LogManager.getLogger(RPCConverter.class.getName());
     private final ClassType<T> locallyConverting;
     private final List<RPCConverter<?>> subconverters;
     private RPCConverter<?> masterConverter;
@@ -106,9 +108,11 @@ public class RPCConverter<T extends RPCObject> {
     }
 
     public <O> O unmarshall(MessageChannel channel, ClassType<O> type) throws IOException {
+        this.logger.traceEntry(null, channel, type);
         ClassType<? extends RPCObject> rpcType = this.getRPCWrapClass(type);
+        this.logger.debug(type.toString() + " type equivalent to RPC is " + rpcType.toString());
         RPCObject unmarshalledRpcObject = this._unmarshall(channel, rpcType);
-        return this.unwrap(unmarshalledRpcObject, type);
+        return this.logger.traceExit(this.unwrap(unmarshalledRpcObject, type));
     }
 
     public <O> O unmarshall(MessageChannel channel, Class<O> type) throws IOException {
