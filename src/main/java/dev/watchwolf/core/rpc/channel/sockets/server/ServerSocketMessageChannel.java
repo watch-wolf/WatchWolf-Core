@@ -40,11 +40,14 @@ public class ServerSocketMessageChannel extends SocketMessageChannel {
         return this.acceptConnection();
     }
 
+    /**
+     * Waits for a client and returns its connection.
+     * If the server closes while waiting, it will return null.
+     * @return Connection to the client (if any)
+     */
     private MessageChannel acceptConnection() throws IOException {
-        if (this.isClosed()) throw new IllegalArgumentException("You must have an open connection first!");
-
         Socket clientSocket = null;
-        while (clientSocket == null) {
+        while (clientSocket == null && !this.isClosed()) {
             synchronized (this) {
                 int timeout = this.serverSocket.getSoTimeout();
                 this.serverSocket.setSoTimeout(200); // don't wait eternally
@@ -60,6 +63,8 @@ public class ServerSocketMessageChannel extends SocketMessageChannel {
                 } catch (InterruptedException ignore) {}
             }
         }
+
+        if (clientSocket == null) return null; // couldn't get - server is closed
 
         ClientSocketMessageChannel clientChannel = (ClientSocketMessageChannel) new ClientSocketChannelFactory(clientSocket.getInetAddress().getHostAddress(), clientSocket.getPort()).build();
         clientChannel.create(clientSocket); // don't connect; re-use the connection

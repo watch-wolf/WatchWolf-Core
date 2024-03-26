@@ -14,12 +14,14 @@ import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
+import static org.junit.jupiter.api.Assertions.*;
+
 public class ITClientSocketMessageChannelShould {
     private static final String host = "127.0.0.1";
     private static final int port = 8900;
 
     private MessageChannel server;
-    private AtomicReference<MessageChannel> clientServerConnection;
+    private AtomicReference<AtomicReference<MessageChannel>> clientServerConnection;
     private Thread serverThread;
 
     /**
@@ -29,14 +31,14 @@ public class ITClientSocketMessageChannelShould {
     public void initServer() throws RuntimeException, TimeoutException {
         this.server = new ServerSocketChannelFactory(host, port).build();
 
-        this.clientServerConnection = new AtomicReference<>();
-        final AtomicReference<MessageChannel> _clientServerConnection = this.clientServerConnection;
+        this.clientServerConnection = new AtomicReference<>(null);
+        final AtomicReference<AtomicReference<MessageChannel>> _clientServerConnection = this.clientServerConnection;
         final MessageChannel _server = this.server;
         serverThread = new Thread(() -> {
             try {
                 MessageChannel connection = _server.create();
                 synchronized (ITClientSocketMessageChannelShould.class) {
-                    _clientServerConnection.set(connection);
+                    _clientServerConnection.set(new AtomicReference<>(connection));
                 }
             } catch (IOException ex) {
                 throw new RuntimeException(ex);
@@ -51,7 +53,7 @@ public class ITClientSocketMessageChannelShould {
     @AfterEach
     public void disposeServer() throws IOException,InterruptedException {
         synchronized (ITClientSocketMessageChannelShould.class) {
-            if (this.clientServerConnection.get() != null) this.clientServerConnection.get().close();
+            if (this.clientServerConnection.get() != null && this.clientServerConnection.get().get() != null) this.clientServerConnection.get().get().close();
         }
         this.server.close();
         this.serverThread.join(8_000);
@@ -168,5 +170,30 @@ public class ITClientSocketMessageChannelShould {
         } finally {
             if (client != null) client.close();
         }
+    }
+
+    @Test
+    public void stopWaitingIfClosed() throws Exception {
+        // don't connect any client
+
+        synchronized (ITClientSocketMessageChannelShould.class) {
+            assertNull(this.clientServerConnection.get(), "Expected no return from `create` method; got response instead");
+        }
+
+        // stop the server
+        this.server.close();
+
+        // we expect return, but no client
+        StateChangeUtils.pollForCondition(() -> {
+            synchronized (ITClientSocketMessageChannelShould.class) {
+                return this.clientServerConnection.get() != null;
+            }
+        }, 2_000, "Expected return from `create` method; got nothing instead");
+        synchronized (ITClientSocketMessageChannelShould.class) {
+            assertNull(this.clientServerConnection.get().get(), "Expected no client return by `create` method; got something instead");
+        }
+
+        this.serverThread.join(8_000);
+        assertFalse(this.serverThread.isAlive(), "Expected server thread to end by itself; got thread running instead");
     }
 }

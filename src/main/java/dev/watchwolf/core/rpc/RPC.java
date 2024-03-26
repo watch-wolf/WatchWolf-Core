@@ -50,10 +50,15 @@ public class RPC implements Runnable, Closeable {
         return !this.linkedConnection.isClosed();
     }
 
+    public MessageChannel _getRemoteConnection() {
+        return this.remoteConnection;
+    }
+
     @Override
     public void run() {
         try {
             this.linkedConnection = this.remoteConnection.create();
+            if (this.linkedConnection == null) throw new RuntimeException(new InterruptedException("Closed server before establishing client connection"));
         } catch (IOException ex) {
             throw new RuntimeException(ex);
         }
