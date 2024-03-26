@@ -20,6 +20,7 @@ import dev.watchwolf.rpc.definitions.Petition;
 import dev.watchwolf.rpc.definitions.WatchWolfComponent;
 
 import java.io.BufferedWriter;
+import java.io.Closeable;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.AbstractMap;
@@ -68,9 +69,37 @@ public class RPCComponentsCreator {
         clazz.addElement(setRPCMethod);
         clazz.addField(rpcNode);
 
+        // Closeable
+        Field closeableListenersNode = new Field(List.class.getName() + "<" + Closeable.class.getName() + ">", "closeableListeners");
+        closeableListenersNode.addModifier(Modifier.PRIVATE);
+        closeableListenersNode.addModifier(Modifier.FINAL);
+        closeableListenersNode.addCommentLine("All the closeables the stub should call when closed");
+
+        Method closeMethod = new Method(void.class, "close"); // TODO add override
+        closeMethod.addModifier(Modifier.PUBLIC);
+        closeMethod.addContent("\tthis.logger.traceEntry();")
+                    .addContent("\tfor (" + Closeable.class.getName() + " closeable : this.closeableListeners) {")
+                    .addContent("\t\ttry {")
+                    .addContent("\t\t\tcloseable.close();")
+                    .addContent("\t\t} catch (" + IOException.class.getName() + " ex) {")
+                    .addContent("\t\t\tthis.logger.error(ex);")
+                    .addContent("\t\t}")
+                    .addContent("\t}");
+
+        Method closeSubscriveMethod = new Method(void.class, "subscribeToCloseEvents");
+        closeSubscriveMethod.addParameter(new Parameter(Closeable.class.getName(), "listener"));
+        closeSubscriveMethod.addModifier(Modifier.PUBLIC);
+        closeSubscriveMethod.addContent("\tthis.logger.traceEntry(null, listener);");
+        closeSubscriveMethod.addContent("\tthis.closeableListeners.add(listener);");
+
+        clazz.addElement(closeMethod);
+        clazz.addElement(closeSubscriveMethod);
+        clazz.addField(closeableListenersNode);
+
         // constructor
         Constructor constructor = new Constructor(localName);
         constructor.addContent("\tthis.logger = " + LogManager.class.getName() + ".getLogger(\"" + pckge + "." + localName + "\");");
+        constructor.addContent("\tthis.closeableListeners = new " + ArrayList.class.getName() + "<>();");
         clazz.addElement(constructor);
 
         // Runner node

@@ -6,6 +6,7 @@ local_maven_repos_path="$HOME/.m2"
 jar_name=$(ls "$base_path/target" | grep '\.jar$')
 
 # clean project & launch "clean" phase (if any)
+rm "$base_path/src/main/java/dev/watchwolf/core/rpc/stubs/serversmanager/ServersManagerLocalStub.java" 2>/dev/null
 docker run -it --rm -v "$base_path":"/compile" -v "$local_maven_repos_path":/root/.m2 maven:3.8.4-openjdk-8 mvn clean --file '/compile'
 
 # compile TODO set "compile scripts" mode when we add that opcion in the pom

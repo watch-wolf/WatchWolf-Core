@@ -17,6 +17,10 @@ private final org.apache.logging.log4j.Logger logger;
 */
 private dev.watchwolf.core.rpc.RPC rpc;
 /**
+* All the closeables the stub should call when closed
+*/
+private final java.util.List<java.io.Closeable> closeableListeners;
+/**
 * The runner will be the one that will run the petitions captured
 */
 private dev.watchwolf.core.rpc.stubs.serversmanager.ServersManagerPetitions runner;
@@ -44,8 +48,25 @@ public void setHandler(dev.watchwolf.core.rpc.RPC handler) {
 	this.logger.traceExit();
 }
 
+public void close() {
+	this.logger.traceEntry();
+	for (java.io.Closeable closeable : this.closeableListeners) {
+		try {
+			closeable.close();
+		} catch (java.io.IOException ex) {
+			this.logger.error(ex);
+		}
+	}
+}
+
+public void subscribeToCloseEvents(java.io.Closeable listener) {
+	this.logger.traceEntry(null, listener);
+	this.closeableListeners.add(listener);
+}
+
 public ServersManagerLocalStub() {
 	this.logger = org.apache.logging.log4j.LogManager.getLogger("dev.watchwolf.core.rpc.stubs.serversmanager.ServersManagerLocalStub");
+	this.closeableListeners = new java.util.ArrayList<>();
 }
 
 public void setRunner(dev.watchwolf.core.rpc.stubs.serversmanager.ServersManagerPetitions runner) {

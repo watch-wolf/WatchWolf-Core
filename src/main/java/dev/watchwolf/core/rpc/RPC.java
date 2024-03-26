@@ -43,6 +43,7 @@ public class RPC implements Runnable, Closeable {
     @Override
     public void close() throws IOException {
         if (this.linkedConnection != null) this.linkedConnection.close();
+        this.localImplementation.close();
     }
 
     public boolean isRunning() {
@@ -58,7 +59,12 @@ public class RPC implements Runnable, Closeable {
     public void run() {
         try {
             this.linkedConnection = this.remoteConnection.create();
-            if (this.linkedConnection == null) throw new RuntimeException(new InterruptedException("Closed server before establishing client connection"));
+            if (this.linkedConnection == null) {
+                try {
+                    this.close(); // as couldn't establish connection, destroy the localImplementation
+                } catch (IOException ignore) {}
+                throw new RuntimeException(new InterruptedException("Closed server before establishing client connection"));
+            }
         } catch (IOException ex) {
             throw new RuntimeException(ex);
         }
@@ -73,6 +79,10 @@ public class RPC implements Runnable, Closeable {
                 Thread.sleep(200); // give it some break
             } catch (InterruptedException ignore) {}
         }
+
+        try {
+            this.close(); // just in case it closed because of the client and not because `close` was called
+        } catch (IOException ignore) {}
 
         System.out.println("RPC connection (" + localImplementation.getClass().getSimpleName() + " over " + this.linkedConnection.toString() + ") closed");
     }
