@@ -11,16 +11,14 @@ public class UsualPlugin extends Plugin {
      * @param version Plugin version (empty string or null if you don't care)
      * @param isPremium If the plugin is premium, or free
      */
-    public UsualPlugin(String name, String version, boolean isPremium) {
+    public UsualPlugin(String name, String version, Boolean isPremium) {
         this.name = name;
         this.version = version;
         this.isPremium = isPremium;
     }
 
     public UsualPlugin(String name, String version) {
-        this.name = name;
-        this.version = version;
-        this.isPremium = null;
+        this(name, version, null);
     }
 
     public UsualPlugin(String name) {
