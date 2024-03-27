@@ -2,7 +2,9 @@ package dev.watchwolf.core.entities;
 
 /**
  * @see <a href="https://stackoverflow.com/a/11024200/9178470">https://stackoverflow.com/a/11024200/9178470</a>
+ * Use dev.watchwolf.core.utils.Version
  */
+@Deprecated
 public class Version implements Comparable<Version> {
     private final String version;
 

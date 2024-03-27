@@ -45,4 +45,13 @@ public class VersionShould {
 
         assertEquals(0, checking.compareTo(comparedTo));
     }
+
+    @Test
+    public void returnInputVersionAsString() throws Exception {
+        String checking = "1.19";
+
+        String got = new Version(checking).toString();
+
+        assertEquals(checking, got);
+    }
 }
