@@ -5,6 +5,8 @@ import dev.watchwolf.core.rpc.channel.MessageChannel;
 import dev.watchwolf.core.rpc.channel.sockets.SocketMessageChannel;
 import dev.watchwolf.core.rpc.channel.sockets.client.ClientSocketChannelFactory;
 import dev.watchwolf.core.rpc.channel.sockets.client.ClientSocketMessageChannel;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.io.IOException;
 import java.net.InetAddress;
@@ -21,6 +23,8 @@ public class ServerSocketMessageChannel extends SocketMessageChannel {
      */
     public static final int BACKLOG = 50;
 
+    private final Logger logger = LogManager.getLogger(ServerSocketMessageChannel.class.getName());
+
     private ServerSocket serverSocket;
     private List<ClientSocketMessageChannel> clients;
 
@@ -29,15 +33,17 @@ public class ServerSocketMessageChannel extends SocketMessageChannel {
     }
 
     public MessageChannel create() throws IOException {
+        this.logger.traceEntry();
         if (this.isClosed()) {
             // first call; initialize server
+            this.logger.info("The server socket is closed; it will be initialized now.");
             synchronized (this) {
                 this.serverSocket = new ServerSocket(this.port, ServerSocketMessageChannel.BACKLOG, InetAddress.getByName(this.host));
                 this.clients = new ArrayList<>();
             }
         }
 
-        return this.acceptConnection();
+        return this.logger.traceExit(this.acceptConnection());
     }
 
     /**
@@ -47,6 +53,7 @@ public class ServerSocketMessageChannel extends SocketMessageChannel {
      */
     private MessageChannel acceptConnection() throws IOException {
         Socket clientSocket = null;
+        this.logger.info("Waiting for client connection...");
         while (clientSocket == null && !this.isClosed()) {
             synchronized (this) {
                 int timeout = this.serverSocket.getSoTimeout();
@@ -64,7 +71,11 @@ public class ServerSocketMessageChannel extends SocketMessageChannel {
             }
         }
 
-        if (clientSocket == null) return null; // couldn't get - server is closed
+        if (clientSocket == null) {
+            // couldn't get - server is closed
+            this.logger.warn("Server was closed before a connection could establish");
+            return null;
+        }
 
         ClientSocketMessageChannel clientChannel = (ClientSocketMessageChannel) new ClientSocketChannelFactory(clientSocket.getInetAddress().getHostAddress(), clientSocket.getPort()).build();
         clientChannel.create(clientSocket); // don't connect; re-use the connection
@@ -89,7 +100,7 @@ public class ServerSocketMessageChannel extends SocketMessageChannel {
             }
         });
 
-        System.out.println("Got client conencted to socket server: " + clientSocket.getInetAddress().getHostAddress() + ":" + clientSocket.getPort());
+        this.logger.info("Got client conencted to socket server: " + clientSocket.getInetAddress().getHostAddress() + ":" + clientSocket.getPort());
 
         synchronized (this) {
             this.clients.add(clientChannel);
@@ -109,15 +120,17 @@ public class ServerSocketMessageChannel extends SocketMessageChannel {
      * @throws IOException Socket exception
      */
     public synchronized void broadcast(byte[] data) throws IOException {
+        this.logger.traceEntry();
         this.clients.removeIf(ClientSocketMessageChannel::isClosed);
-        if (this.clients.isEmpty()) throw new IOException("No target client to send");
+        if (this.clients.isEmpty()) throw this.logger.throwing(new IOException("No target client to send"));
 
         for (ClientSocketMessageChannel client : this.clients) client.send(data);
+        this.logger.traceExit();
     }
 
     @Override
     public byte[] get(int numBytes, int timeout) throws TimeoutException, IOException {
-        throw new UnsupportedOperationException("Use the get method from the specific client");
+        throw this.logger.throwing(new UnsupportedOperationException("Use the get method from the specific client"));
     }
 
     @Override
@@ -134,13 +147,15 @@ public class ServerSocketMessageChannel extends SocketMessageChannel {
 
     @Override
     public synchronized void close() throws IOException {
-        System.out.println("Closing server " + this.serverSocket.getInetAddress().getHostAddress() + ":" + this.serverSocket.getLocalPort() + "...");
+        this.logger.traceEntry();
+        this.logger.info("Closing server " + this.serverSocket.getInetAddress().getHostAddress() + ":" + this.serverSocket.getLocalPort() + "...");
         if (this.clients != null) {
             for (ClientSocketMessageChannel client : new ArrayList<>(this.clients)) client.close();
             this.clients.clear(); // no connection
         }
 
         if (this.serverSocket != null) this.serverSocket.close();
-        System.out.println("Server closed.");
+        this.logger.info("Server closed.");
+        this.logger.traceExit();
     }
 }

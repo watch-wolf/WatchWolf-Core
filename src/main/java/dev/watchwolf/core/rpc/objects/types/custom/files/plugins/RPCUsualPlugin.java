@@ -42,18 +42,18 @@ public class RPCUsualPlugin extends RPCPlugin {
 
         @Override
         protected <O> O performUnwrap(RPCPlugin obj, ClassType<O> type) throws UnsupportedOperationException {
-            if (type.equals(ClassTypeFactory.getType(UsualPlugin.class))) return type.cast(((RPCUsualPlugin) obj).object);
+            if (obj.getObject().getClass().equals(UsualPlugin.class)) return type.cast(((RPCUsualPlugin) obj).object);
 
             throw new UnsupportedOperationException(this.getClass().getName() + " can't unwrap " + type.getName());
         }
 
         @Override
         protected RPCPlugin performUnmarshall(MessageChannel channel, ClassType<? extends RPCPlugin> type) throws UnsupportedOperationException, IOException {
-            byte id = this.getMasterConverter().unmarshall(channel, RPCByte.class).getObject();
+            byte id = this.getMasterConverter().unmarshall(channel, Byte.class);
             if (id != USUAL_PLUGIN_ID) throw new UnsupportedOperationException("Got plugin of different type");
 
-            String pluginName = this.getMasterConverter().unmarshall(channel, RPCString.class).getObject();
-            String pluginVersion = this.getMasterConverter().unmarshall(channel, RPCString.class).getObject();
+            String pluginName = this.getMasterConverter().unmarshall(channel, String.class);
+            String pluginVersion = this.getMasterConverter().unmarshall(channel, String.class);
             return new RPCUsualPlugin(new UsualPlugin(pluginName, pluginVersion.isEmpty() ? null : pluginVersion));
         }
 

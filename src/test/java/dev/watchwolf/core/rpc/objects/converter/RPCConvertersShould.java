@@ -8,6 +8,7 @@ import dev.watchwolf.core.entities.files.ZipFile;
 import dev.watchwolf.core.entities.files.plugins.Plugin;
 import dev.watchwolf.core.entities.files.plugins.UsualPlugin;
 import dev.watchwolf.core.rpc.channel.MessageChannel;
+import dev.watchwolf.core.rpc.objects.converter.class_type.ClassTypeFactory;
 import dev.watchwolf.core.rpc.objects.types.RPCObject;
 import dev.watchwolf.core.rpc.objects.types.custom.files.RPCConfigFile;
 import dev.watchwolf.core.rpc.objects.types.custom.files.plugins.RPCUsualPlugin;
@@ -97,6 +98,30 @@ public class RPCConvertersShould {
         WorldType got = converters.unmarshall(data, WorldType.class);
 
         assertEquals(WorldType.FLAT, got);
+    }
+
+    @Test
+    public void unmarshallListOfComplexTypes() throws Exception {
+        RPCObjectsConverterFactory factory = new RPCObjectsConverterFactory();
+        RPCConverter<?> converters = factory.build();
+
+        MessageChannel data = new MessageChannelMock(new byte[]{
+                0x01, 0x00, // [array size] only 1 plugin
+
+                0x00, // [plugin type] usual plugin
+                0x09, 0x00, // [plugin name size]
+                'W', 'a', 't', 'c', 'h', 'W', 'o', 'l', 'f', // [plugin name]
+                0x00, 0x00, // [plugin version size]
+                // no plugin version
+        });
+
+        Collection<Plugin> got = (Collection<Plugin>)converters.unmarshall(data, ClassTypeFactory.getTemplateType(Collection.class, Plugin.class));
+
+        assertEquals(1, got.size(), "Expected one plugin; got otherwise instead");
+        assertEquals(UsualPlugin.class, got.stream().findFirst().get().getClass(), "Got plugin of a different type than expected (usual plugin)");
+        UsualPlugin gotPlugin = (UsualPlugin) got.stream().findFirst().get();
+        assertEquals("WatchWolf", gotPlugin.getName(), "Expected usual plugin to be 'WatchWolf'");
+        assertEquals(null, gotPlugin.getVersion(), "Expected usual plugin to have no version; got something instead");
     }
 
     @Test

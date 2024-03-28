@@ -41,17 +41,17 @@ public class RPCFilePlugin extends RPCPlugin {
 
         @Override
         protected <O> O performUnwrap(RPCPlugin obj, ClassType<O> type) throws UnsupportedOperationException {
-            if (type.equals(ClassTypeFactory.getType(FilePlugin.class))) return type.cast(((RPCFilePlugin) obj).object);
+            if (obj.getObject().getClass().equals(FilePlugin.class)) return type.cast(((RPCFilePlugin) obj).object);
 
             throw new UnsupportedOperationException(this.getClass().getName() + " can't unwrap " + type.getName());
         }
 
         @Override
         protected RPCPlugin performUnmarshall(MessageChannel channel, ClassType<? extends RPCPlugin> type) throws UnsupportedOperationException, IOException {
-            byte id = this.getMasterConverter().unmarshall(channel, RPCByte.class).getObject();
+            byte id = this.getMasterConverter().unmarshall(channel, Byte.class);
             if (id != FILE_PLUGIN_ID) throw new UnsupportedOperationException("Got plugin of different type");
 
-            ConfigFile configFile = this.getMasterConverter().unmarshall(channel, RPCConfigFile.class).getObject();
+            ConfigFile configFile = this.getMasterConverter().unmarshall(channel, ConfigFile.class);
             return new RPCFilePlugin(new FilePlugin(configFile));
         }
 

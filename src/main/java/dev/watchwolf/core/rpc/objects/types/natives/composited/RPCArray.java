@@ -76,7 +76,12 @@ public class RPCArray extends NativeTypeRPCObject<Collection<? extends RPCObject
 
                 Collection<Object> castedList = new ArrayList<>();
                 for (RPCObject entry : obj.object) {
-                    castedList.add(this.getMasterConverter().unwrap(entry, subtype.getSubtype()));
+                    try {
+                        castedList.add(this.getMasterConverter().unwrap(entry, subtype.getSubtype()));
+                    } catch (UnsupportedOperationException ex) {
+                        System.err.println("Couldn't unwrap " + entry.toString());
+                        ex.printStackTrace();
+                    }
                 }
                 return type.cast(castedList);
             }

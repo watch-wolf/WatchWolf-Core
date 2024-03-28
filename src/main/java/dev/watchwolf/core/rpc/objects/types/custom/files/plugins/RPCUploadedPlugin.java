@@ -40,17 +40,17 @@ public class RPCUploadedPlugin extends RPCPlugin {
 
         @Override
         protected <O> O performUnwrap(RPCPlugin obj, ClassType<O> type) throws UnsupportedOperationException {
-            if (type.equals(ClassTypeFactory.getType(UploadedPlugin.class))) return type.cast(((RPCUploadedPlugin) obj).object);
+            if (obj.getObject().getClass().equals(UploadedPlugin.class)) return type.cast(((RPCUploadedPlugin) obj).object);
 
             throw new UnsupportedOperationException(this.getClass().getName() + " can't unwrap " + type.getName());
         }
 
         @Override
         protected RPCPlugin performUnmarshall(MessageChannel channel, ClassType<? extends RPCPlugin> type) throws UnsupportedOperationException,IOException {
-            byte id = this.getMasterConverter().unmarshall(channel, RPCByte.class).getObject();
+            byte id = this.getMasterConverter().unmarshall(channel, Byte.class);
             if (id != UPLOADED_PLUGIN_ID) throw new UnsupportedOperationException("Got plugin of different type");
 
-            String uploadedPluginUrl = this.getMasterConverter().unmarshall(channel, RPCString.class).getObject();
+            String uploadedPluginUrl = this.getMasterConverter().unmarshall(channel, String.class);
             return new RPCUploadedPlugin(new UploadedPlugin(uploadedPluginUrl));
         }
 
