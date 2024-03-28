@@ -125,6 +125,20 @@ public class RPCConvertersShould {
     }
 
     @Test
+    public void unmarshallEmptyList() throws Exception {
+        RPCObjectsConverterFactory factory = new RPCObjectsConverterFactory();
+        RPCConverter<?> converters = factory.build();
+
+        MessageChannel data = new MessageChannelMock(new byte[]{
+                0x00, 0x00, // [array size] empty
+        });
+
+        Collection<Byte> got = (Collection<Byte>)converters.unmarshall(data, ClassTypeFactory.getTemplateType(Collection.class, Byte.class));
+
+        assertEquals(0, got.size(), "Expected empty list; got otherwise instead");
+    }
+
+    @Test
     public void exportZipFiles() throws Exception {
         try (FileSystem fs = Jimfs.newFileSystem(Configuration.unix())) {
             Path outPath = fs.getPath("/test-out");

@@ -215,6 +215,8 @@ public class RPCComponentsCreator {
             classMethod.addParameter(channelParam);
             classMethod.addParameter(converterParam);
 
+            classMethod.addContent("\tthis.logger.traceEntry();");
+
             // contents
             StringBuilder params = new StringBuilder(); // params list to call the function
             for (Content content : petitions.get(n).getContents()) {
@@ -227,6 +229,7 @@ public class RPCComponentsCreator {
                     unmarshallClassParam = ClassTypeFactory.class.getName() + ".getTemplateType(" + nativeType.getName() /* don't use `typeToName` here; we need the raw class */ + ".class, " + ((TemplateClassType)nativeType).getSubtype().getName() + ".class)";
                 }
                 classMethod.addContent("\t" + TypeToRPCType.typeToName(nativeType) + " " + content.getVariableName() + " = " + "converter.unmarshall(channel, " + unmarshallClassParam + ");");
+                classMethod.addContent("\tthis.logger.debug(\"" + content.getVariableName() + " = \" + String.valueOf(" + content.getVariableName() + "));");
                 params.append(content.getVariableName()).append(", ");
             }
             if (params.length() > 0) {
@@ -234,9 +237,12 @@ public class RPCComponentsCreator {
                 classMethod.addContent(""); // leave some space
             }
             String varAssignation = (returnType == null) ? "" : (TypeToRPCType.typeToName(TypeToRPCType.getType(returnType.getType())) + " " + returnType.getVariableName() + " = ");
-            classMethod.addContent("\tthis.logger.traceEntry(" + ((params.length() == 0) ? "" : ("null, " + params.toString())) + ");")
-                        .addContent("\t" + varAssignation + "this.runner." + petitions.get(n).getFunctionName() + "(" + params.toString() + ");")
-                        .addContent("\tthis.logger.traceExit(" + ((returnType == null) ? "" : returnType.getVariableName()) + ");");
+            classMethod.addContent("\tthis.logger.debug(\"Calling `" + petitions.get(n).getFunctionName() + "`...\");");
+            classMethod.addContent("\t" + varAssignation + "this.runner." + petitions.get(n).getFunctionName() + "(" + params.toString() + ");");
+
+            if (returnType == null) classMethod.addContent("\tthis.logger.debug(\"" + petitions.get(n).getFunctionName() + " returned\");");
+            else classMethod.addContent("\tthis.logger.debug(\"Done calling `" + petitions.get(n).getFunctionName() + "`; got: \" + String.valueOf(" + returnType.getVariableName() + "));");
+
 
             if (returnType != null) {
                 // header
@@ -248,6 +254,8 @@ public class RPCComponentsCreator {
                 if (rpcArgType == null) throw new IllegalArgumentException("Couldn't parse " + returnType.getType() + " into RPC!\n");
                 classMethod.addContent("\tnew " + TypeToRPCType.typeToName(rpcArgType) + "(" + returnType.getVariableName() + ").send(channel);");
             }
+
+            classMethod .addContent("\tthis.logger.traceExit();");
 
             classMethods[n] = classMethod;
         }

@@ -107,7 +107,9 @@ private void forwardCall(byte origin, boolean isReturn, short operation, dev.wat
 */
 private void nop(dev.watchwolf.core.rpc.channel.MessageChannel channel, dev.watchwolf.core.rpc.objects.converter.RPCConverter<?> converter) throws java.io.IOException {
 	this.logger.traceEntry();
+	this.logger.debug("Calling `nop`...");
 	this.runner.nop();
+	this.logger.debug("nop returned");
 	this.logger.traceExit();
 }
 
@@ -125,20 +127,28 @@ Once a 'start server' request is received the program should create a server wit
 If it's not possible to create it (for example: one argument is invalid, the user sent a plugin when it's specified that only Usual Plugins are allowed, or there's no free servers of that type), then an empty string is returned.
 */
 private void startServer(dev.watchwolf.core.rpc.channel.MessageChannel channel, dev.watchwolf.core.rpc.objects.converter.RPCConverter<?> converter) throws java.io.IOException {
+	this.logger.traceEntry();
 	java.lang.String serverType = converter.unmarshall(channel, java.lang.String.class);
+	this.logger.debug("serverType = " + String.valueOf(serverType));
 	java.lang.String serverVersion = converter.unmarshall(channel, java.lang.String.class);
+	this.logger.debug("serverVersion = " + String.valueOf(serverVersion));
 	java.util.Collection<dev.watchwolf.core.entities.files.plugins.Plugin> plugins = converter.unmarshall(channel, dev.watchwolf.core.rpc.objects.converter.class_type.ClassTypeFactory.getTemplateType(java.util.Collection.class, dev.watchwolf.core.entities.files.plugins.Plugin.class));
+	this.logger.debug("plugins = " + String.valueOf(plugins));
 	dev.watchwolf.core.entities.WorldType worldType = converter.unmarshall(channel, dev.watchwolf.core.entities.WorldType.class);
+	this.logger.debug("worldType = " + String.valueOf(worldType));
 	java.util.Collection<dev.watchwolf.core.entities.files.ConfigFile> maps = converter.unmarshall(channel, dev.watchwolf.core.rpc.objects.converter.class_type.ClassTypeFactory.getTemplateType(java.util.Collection.class, dev.watchwolf.core.entities.files.ConfigFile.class));
+	this.logger.debug("maps = " + String.valueOf(maps));
 	java.util.Collection<dev.watchwolf.core.entities.files.ConfigFile> configFiles = converter.unmarshall(channel, dev.watchwolf.core.rpc.objects.converter.class_type.ClassTypeFactory.getTemplateType(java.util.Collection.class, dev.watchwolf.core.entities.files.ConfigFile.class));
+	this.logger.debug("configFiles = " + String.valueOf(configFiles));
 
-	this.logger.traceEntry(null, serverType, serverVersion, plugins, worldType, maps, configFiles);
+	this.logger.debug("Calling `startServer`...");
 	java.lang.String ip = this.runner.startServer(serverType, serverVersion, plugins, worldType, maps, configFiles);
-	this.logger.traceExit(ip);
+	this.logger.debug("Done calling `startServer`; got: " + String.valueOf(ip));
 
 	new dev.watchwolf.core.rpc.objects.types.natives.primitive.RPCByte((byte) 0b0001_1_000).send(channel);
 	new dev.watchwolf.core.rpc.objects.types.natives.primitive.RPCByte((byte) 0b00000000).send(channel);
 	new dev.watchwolf.core.rpc.objects.types.natives.composited.RPCString(ip).send(channel);
+	this.logger.traceExit();
 }
 
 /**
