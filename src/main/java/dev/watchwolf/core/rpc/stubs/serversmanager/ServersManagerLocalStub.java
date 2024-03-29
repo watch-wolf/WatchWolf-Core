@@ -121,6 +121,8 @@ Once a 'start server' request is received the program should create a server wit
 * - serverVersion: Server version to start.
 * - plugins: Plugins to add to the server.
 * - worldType: Defines if the world needs to be a regular one, or superflat.
+* - seed: Defines the world seed.
+Set an empty string for it to be random.
 * - maps: Maps to load to the server.
 * - configFiles: Additional server config files.
 * This method will return: IP - Started server IP and port.
@@ -136,13 +138,15 @@ private void startServer(dev.watchwolf.core.rpc.channel.MessageChannel channel, 
 	this.logger.debug("plugins = " + String.valueOf(plugins));
 	dev.watchwolf.core.entities.WorldType worldType = converter.unmarshall(channel, dev.watchwolf.core.entities.WorldType.class);
 	this.logger.debug("worldType = " + String.valueOf(worldType));
+	java.lang.String seed = converter.unmarshall(channel, java.lang.String.class);
+	this.logger.debug("seed = " + String.valueOf(seed));
 	java.util.Collection<dev.watchwolf.core.entities.files.ConfigFile> maps = converter.unmarshall(channel, dev.watchwolf.core.rpc.objects.converter.class_type.ClassTypeFactory.getTemplateType(java.util.Collection.class, dev.watchwolf.core.entities.files.ConfigFile.class));
 	this.logger.debug("maps = " + String.valueOf(maps));
 	java.util.Collection<dev.watchwolf.core.entities.files.ConfigFile> configFiles = converter.unmarshall(channel, dev.watchwolf.core.rpc.objects.converter.class_type.ClassTypeFactory.getTemplateType(java.util.Collection.class, dev.watchwolf.core.entities.files.ConfigFile.class));
 	this.logger.debug("configFiles = " + String.valueOf(configFiles));
 
 	this.logger.debug("Calling `startServer`...");
-	java.lang.String ip = this.runner.startServer(serverType, serverVersion, plugins, worldType, maps, configFiles);
+	java.lang.String ip = this.runner.startServer(serverType, serverVersion, plugins, worldType, seed, maps, configFiles);
 	this.logger.debug("Done calling `startServer`; got: " + String.valueOf(ip));
 
 	new dev.watchwolf.core.rpc.objects.types.natives.primitive.RPCByte((byte) 0b0001_1_000).send(channel);
