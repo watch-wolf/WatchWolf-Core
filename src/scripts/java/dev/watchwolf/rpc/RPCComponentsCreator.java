@@ -415,16 +415,6 @@ public class RPCComponentsCreator {
 
         pLocalForwardMethod.addContent("\tthis.logger.traceEntry(null, origin, isReturn, operation, channel, converter);");
 
-        if (component.getName().equals("Servers Manager")) {
-            // legacy call
-            pLocalForwardMethod.addContent("\tif (origin == 1 /* WW server is the origin */ && isReturn && operation == 2 /* 'server started' return */) {")
-                                .addContent("\t\t// legacy call; read arguments and do nothing")
-                                .addContent("\t\tconverter.unmarshall(channel, " + RPCString.class.getName() + ".class);")
-                                .addContent("\t\tthis.logger.traceExit();")
-                                .addContent("\t\treturn;")
-                                .addContent("\t}");
-        }
-
         // exceptions
         pLocalForwardMethod.addContent("")
                             .addContent("\t// arg guards")

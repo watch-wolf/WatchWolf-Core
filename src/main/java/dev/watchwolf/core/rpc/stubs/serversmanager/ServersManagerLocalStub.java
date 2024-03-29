@@ -82,12 +82,6 @@ public synchronized dev.watchwolf.core.rpc.channel.MessageChannel getLatestMessa
 
 private void forwardCall(byte origin, boolean isReturn, short operation, dev.watchwolf.core.rpc.channel.MessageChannel channel, dev.watchwolf.core.rpc.objects.converter.RPCConverter<?> converter) throws java.io.IOException {
 	this.logger.traceEntry(null, origin, isReturn, operation, channel, converter);
-	if (origin == 1 /* WW server is the origin */ && isReturn && operation == 2 /* 'server started' return */) {
-		// legacy call; read arguments and do nothing
-		converter.unmarshall(channel, dev.watchwolf.core.rpc.objects.types.natives.composited.RPCString.class);
-		this.logger.traceExit();
-		return;
-	}
 
 	// arg guards
 	if (origin != 0) throw this.logger.throwing(new java.lang.RuntimeException("Got a request targeting a different component"));
