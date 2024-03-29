@@ -23,6 +23,7 @@ public class RPC implements Runnable, Closeable {
         this.localImplementation = localImplementation;
         this.remoteConnection = remoteConnection;
         this.converter = converter;
+        this.linkedConnection = null;
     }
 
     /**
@@ -34,6 +35,7 @@ public class RPC implements Runnable, Closeable {
         this.localImplementation = localImplementation;
         this.remoteConnection = that.remoteConnection;
         this.converter = that.converter;
+        this.linkedConnection = null;
     }
 
     // TODO does it needs synchronization?
@@ -66,29 +68,55 @@ public class RPC implements Runnable, Closeable {
         return this.remoteConnection;
     }
 
+    /**
+     * Invokes the `create` method of the connection; waiting for a client and linking it to this instance
+     * @throws IOException Channel exception
+     * @throws InterruptedException The socket server was closed before a connection was made
+     */
+    public void createConnection() throws IOException,InterruptedException {
+        logger.traceEntry();
+        this.linkedConnection = this.remoteConnection.create();
+        if (this.linkedConnection == null) {
+            try {
+                this.close(); // as couldn't establish connection, destroy the localImplementation
+            } catch (IOException ignore) {}
+            throw this.logger.throwing(new InterruptedException("Closed server before establishing client connection"));
+        }
+
+        logger.info("RPC connection established (connection: " + this.linkedConnection.toString() + ")");
+        logger.traceExit();
+    }
+
+    /**
+     * If the connection is still active, and bytes were received, it will forward the call to the implementation.
+     * @throws IOException Channel exception
+     */
+    public void processOneCall() throws IOException {
+        if (this.linkedConnection == null) throw new IllegalArgumentException("You have to call first `createConnection`");
+        if (this.linkedConnection.isClosed()) return;
+        if (!this.linkedConnection.areBytesAvailable()) return;
+
+        this.localImplementation.forwardCall(this.linkedConnection, this.converter);
+    }
+
     @Override
     public void run() {
         logger.traceEntry();
-        try {
-            this.linkedConnection = this.remoteConnection.create();
-            if (this.linkedConnection == null) {
-                try {
-                    this.close(); // as couldn't establish connection, destroy the localImplementation
-                } catch (IOException ignore) {}
-                throw this.logger.throwing(new RuntimeException(new InterruptedException("Closed server before establishing client connection")));
+        if (this.linkedConnection == null) {
+            try {
+                this.createConnection();
+            } catch (IOException | InterruptedException ex) {
+                throw this.logger.throwing(new RuntimeException(ex));
             }
-        } catch (IOException ex) {
-            throw this.logger.throwing(new RuntimeException(ex));
         }
 
         try (final CloseableThreadContext.Instance ctc = CloseableThreadContext.push(this.localImplementation.getClass().getSimpleName()).push(this.linkedConnection.toString())) {
-            this.logger.info("RPC connection established");
             while (!this.linkedConnection.isClosed()) {
                 try {
                     this.logger.debug("Waiting for bytes...");
                     while (!this.linkedConnection.areBytesAvailable()) Thread.sleep(200); // TODO use notify
                     this.logger.debug("Got bytes; forwarding...");
-                    this.localImplementation.forwardCall(this.linkedConnection, this.converter);
+                    this.processOneCall();
                 } catch (IOException | InterruptedException ex) {}
 
                 try {
