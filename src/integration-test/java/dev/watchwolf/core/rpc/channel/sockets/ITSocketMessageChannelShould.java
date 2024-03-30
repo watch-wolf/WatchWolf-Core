@@ -11,6 +11,7 @@ import org.junit.jupiter.api.Timeout;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -42,14 +43,8 @@ public class ITSocketMessageChannelShould {
             serverThread.start();
 
             // wait for it to start
-            int tries = 8;
-            while (tries > 0 && server.isClosed()) {
-                try {
-                    Thread.sleep(200);
-                } catch (InterruptedException ignore) { }
-                tries--;
-            }
-            assertFalse(server.isClosed(), "Expected opened server; got closed one instead");
+            StateChangeUtils.pollForCondition(() -> !_server.isClosed(), 4_000,
+                    "Expected opened server; got closed one instead");
 
             client = new ClientSocketChannelFactory(host, port).build().create();
 
@@ -167,6 +162,75 @@ public class ITSocketMessageChannelShould {
         } finally {
             if (server != null) server.close();
             if (client != null) client.close();
+            if (serverThread != null) serverThread.join(8_000);
+        }
+    }
+
+    @Test
+    public void restoreAClosedConnection() throws Exception {
+        String host = "127.0.0.1";
+        int port = 8900;
+        MessageChannel server = null,
+                client1 = null,
+                client2 = null;
+        Thread serverThread = null;
+
+        byte[] toSend = {(byte) 0, (byte) 1, (byte) 2};
+
+        try {
+            server = new ServerSocketChannelFactory(host, port).build();
+
+            final MessageChannel _server = server;
+            final AtomicBoolean clientWasClosed = new AtomicBoolean(false);
+            final AtomicReference<MessageChannel> serverInstance = new AtomicReference<>();
+            serverThread = new Thread(() -> {
+                try {
+                    MessageChannel connection = _server.create();
+                    System.out.println("A connection was established");
+                    connection.close();
+                    synchronized (clientWasClosed) {
+                        clientWasClosed.set(true);
+                    }
+                    System.out.println("Waiting for second connection...");
+                    serverInstance.set(_server.create());
+                } catch (IOException ex) {
+                    ex.printStackTrace();
+                }
+            });
+            serverThread.start();
+
+            // wait for it to start
+            StateChangeUtils.pollForCondition(() -> !_server.isClosed(), 4_000,
+                    "Expected opened server; got closed one instead");
+
+            client1 = new ClientSocketChannelFactory(host, port).build().create();
+
+            // wait for user to connect&disconnect
+            StateChangeUtils.pollForCondition(() -> {
+                synchronized (clientWasClosed) {
+                    return clientWasClosed.get();
+                }
+            }, 8_000, "Expected client 1 to be closed, but never reached that section");
+            client1 = null;
+
+            client2 = new ClientSocketChannelFactory(host, port).build().create();
+
+            // wait for user to connect
+            StateChangeUtils.pollForCondition(() -> ((ServerSocketMessageChannel)_server).isEndConnected(), 8_000,
+                    "Expected client 2 to connect; got otherwise instead");
+
+            client2.send(toSend);
+
+            byte[] got = serverInstance.get().get(toSend.length, 5000);
+            assertEquals(toSend.length, got.length, "Different length got");
+
+            assertTrue(Arrays.equals(toSend, got), "Got different between sent and got. Sent: " + Arrays.toString(toSend) + "; got: " + Arrays.toString(got));
+        } catch (Exception ex) {
+            throw ex;
+        } finally {
+            if (server != null) server.close();
+            if (client1 != null) client1.close();
+            if (client2 != null) client2.close();
             if (serverThread != null) serverThread.join(8_000);
         }
     }
