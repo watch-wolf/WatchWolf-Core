@@ -54,22 +54,22 @@ public class RPCConfigFile extends RPCObjectWrapper<ConfigFile> {
 
         @Override
         protected RPCConfigFile performUnmarshall(MessageChannel channel, ClassType<? extends RPCConfigFile> type) throws IOException {
-            RPCString nameAndExtension = this.getMasterConverter().unmarshall(channel, RPCString.class);
-            RPCString offsetPath = this.getMasterConverter().unmarshall(channel, RPCString.class);
+            String nameAndExtension = this.getMasterConverter().unmarshall(channel, String.class);
+            String offsetPath = this.getMasterConverter().unmarshall(channel, String.class);
 
             // read a 4-byte integer
             int length = 0;
             int multiplier = 0;
             for (int n = 0; n < 4; n++) {
-                length |= (this.getMasterConverter().unmarshall(channel, RPCByte.class).getUnsignedObject() << multiplier);
+                length |= (this.getMasterConverter().unmarshall(channel, Byte.class) << multiplier);
                 multiplier += 8;
             }
 
             byte []file = new byte[length];
             for (int n = 0; n < length; n++) file[n] = (byte)this.getMasterConverter().unmarshall(channel, RPCByte.class).getUnsignedObject();
 
-            ConfigFile object = new ConfigFile(nameAndExtension.getObject(), file, offsetPath.getObject());
-            if (object.getExtension().equals("zip")) object = new ZipFile(nameAndExtension.getObject(), file, offsetPath.getObject()); // we can store it as a zip
+            ConfigFile object = new ConfigFile(nameAndExtension, file, offsetPath);
+            if (object.getExtension().equals("zip")) object = new ZipFile(nameAndExtension, file, offsetPath); // we can store it as a zip
             return new RPCConfigFile(object);
         }
 

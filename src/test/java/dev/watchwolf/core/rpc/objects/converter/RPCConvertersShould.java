@@ -139,6 +139,50 @@ public class RPCConvertersShould {
     }
 
     @Test
+    public void unmarshallConfigFile() throws Exception {
+        RPCObjectsConverterFactory factory = new RPCObjectsConverterFactory();
+        RPCConverter<?> converters = factory.build();
+
+        MessageChannel data = new MessageChannelMock(new byte[]{
+                // name&extension
+                0x08, 0x00,
+                't', 'e', 's', 't', '.', 't', 'x', 't',
+                // offset
+                0x01, 0x00,
+                '.',
+                // contents
+                0x00, 0x00, 0x00, 0x00 // size (4 bytes for files)
+        });
+
+        ConfigFile got = converters.unmarshall(data, ConfigFile.class);
+
+        assertEquals("test", got.getName(), "Expected file to be named 'test'; got otherwise instead");
+        assertEquals("txt", got.getExtension(), "Wrong extension got: expected text file");
+    }
+
+    @Test
+    public void unmarshallZipFile() throws Exception {
+        RPCObjectsConverterFactory factory = new RPCObjectsConverterFactory();
+        RPCConverter<?> converters = factory.build();
+
+        MessageChannel data = new MessageChannelMock(new byte[]{
+                // name&extension
+                0x08, 0x00,
+                't', 'e', 's', 't', '.', 'z', 'i', 'p',
+                // offset
+                0x01, 0x00,
+                '.',
+                // contents
+                0x00, 0x00, 0x00, 0x00 // size (4 bytes for files)
+        });
+
+        ConfigFile got = converters.unmarshall(data, ConfigFile.class);
+
+        assertEquals("zip", got.getExtension(), "Wrong extension got: expected zip file");
+        assertEquals(ZipFile.class, got.getClass(), "Expected ConfigFile to be subclass of ZipFile; got different class instead");
+    }
+
+    @Test
     public void exportZipFiles() throws Exception {
         try (FileSystem fs = Jimfs.newFileSystem(Configuration.unix())) {
             Path outPath = fs.getPath("/test-out");
