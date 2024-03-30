@@ -83,7 +83,7 @@ public class ServerSocketMessageChannel extends SocketMessageChannel {
         final Socket _clientSocket = clientSocket;
         clientChannel.addClientClosedListener(() -> {
             // if it's the last client, close the server
-            System.out.println("Client closed event (" + _clientSocket.getInetAddress().getHostAddress() + ":" + _clientSocket.getPort() + ")");
+            _this.logger.info("Client closed event (" + _clientSocket.getInetAddress().getHostAddress() + ":" + _clientSocket.getPort() + ")");
             boolean needsClosing;
             synchronized (_this) {
                 this.clients.removeIf(ClientSocketMessageChannel::isClosed);
@@ -91,11 +91,11 @@ public class ServerSocketMessageChannel extends SocketMessageChannel {
             }
 
             if (needsClosing) {
-                System.out.println("Last client disconnected from " + _this.serverSocket.getInetAddress().getHostAddress() + ":" + _this.serverSocket.getLocalPort() + "; closing server...");
+                _this.logger.info("Last client disconnected from " + _this.serverSocket.getInetAddress().getHostAddress() + ":" + _this.serverSocket.getLocalPort() + "; closing server...");
                 try {
                     _this.close();
                 } catch (IOException e) {
-                    throw new RuntimeException(e);
+                    throw _this.logger.throwing(new RuntimeException(e));
                 }
             }
         });
