@@ -20,7 +20,6 @@ import static org.junit.jupiter.api.Assertions.*;
 public class ITSocketMessageChannelShould {
     @Test
     public void sendAndReceiveData() throws Exception {
-        String host = "127.0.0.1";
         int port = 8900;
         MessageChannel server = null,
                         client = null;
@@ -29,7 +28,7 @@ public class ITSocketMessageChannelShould {
         byte[] toSend = {(byte) 0, (byte) 1, (byte) 2};
 
         try {
-            server = new ServerSocketChannelFactory(host, port).build();
+            server = new ServerSocketChannelFactory("0.0.0.0", port).build();
 
             final AtomicReference<MessageChannel> serverInstance = new AtomicReference<>();
             final MessageChannel _server = server;
@@ -46,7 +45,7 @@ public class ITSocketMessageChannelShould {
             StateChangeUtils.pollForCondition(() -> !_server.isClosed(), 4_000,
                     "Expected opened server; got closed one instead");
 
-            client = new ClientSocketChannelFactory(host, port).build().create();
+            client = new ClientSocketChannelFactory("127.0.0.1", port).build().create();
 
             // wait for user to connect
             StateChangeUtils.pollForCondition(() -> ((ServerSocketMessageChannel)_server).isEndConnected(), 8_000);
@@ -70,7 +69,6 @@ public class ITSocketMessageChannelShould {
     public void sendHugeData() throws Exception {
         int numBytes = 65536*4; // 4 times more than the limit
 
-        String host = "127.0.0.1";
         int port = 8900;
         MessageChannel server = null, client = null;
         Thread serverThread = null;
@@ -79,7 +77,7 @@ public class ITSocketMessageChannelShould {
         for (int i = 0; i < numBytes; i++) toSend[i] = (byte) (i % 128);
 
         try {
-            server = new ServerSocketChannelFactory(host, port).build();
+            server = new ServerSocketChannelFactory("0.0.0.0", port).build();
 
             final AtomicReference<MessageChannel> serverInstance = new AtomicReference<>();
             final MessageChannel _server = server;
@@ -96,7 +94,7 @@ public class ITSocketMessageChannelShould {
             StateChangeUtils.pollForCondition(() -> !_server.isClosed(), 1_600,
                                             "Expected opened server; got closed one instead");
 
-            client = new ClientSocketChannelFactory(host, port).build().create();
+            client = new ClientSocketChannelFactory("127.0.0.1", port).build().create();
 
             // wait for user to connect
             StateChangeUtils.pollForCondition(() -> ((ServerSocketMessageChannel)_server).isEndConnected(), 8_000,
@@ -119,13 +117,12 @@ public class ITSocketMessageChannelShould {
 
     @Test
     public void interruptIfNoData() throws Exception {
-        String host = "127.0.0.1";
         int port = 8900;
         MessageChannel server = null, client = null;
         Thread serverThread = null;
 
         try {
-            server = new ServerSocketChannelFactory(host, port).build();
+            server = new ServerSocketChannelFactory("0.0.0.0", port).build();
 
             final AtomicReference<MessageChannel> serverInstance = new AtomicReference<>();
             final MessageChannel _server = server;
@@ -142,7 +139,7 @@ public class ITSocketMessageChannelShould {
             StateChangeUtils.pollForCondition(() -> !_server.isClosed(), 1_600,
                                                 "Expected opened server; got closed one instead");
 
-            client = new ClientSocketChannelFactory(host, port).build().create();
+            client = new ClientSocketChannelFactory("127.0.0.1", port).build().create();
 
             // wait for user to connect
             StateChangeUtils.pollForCondition(() -> ((ServerSocketMessageChannel)_server).isEndConnected(), 8_000,
@@ -168,7 +165,6 @@ public class ITSocketMessageChannelShould {
 
     @Test
     public void restoreAClosedConnection() throws Exception {
-        String host = "127.0.0.1";
         int port = 8900;
         MessageChannel server = null,
                 client1 = null,
@@ -178,7 +174,7 @@ public class ITSocketMessageChannelShould {
         byte[] toSend = {(byte) 0, (byte) 1, (byte) 2};
 
         try {
-            server = new ServerSocketChannelFactory(host, port).build();
+            server = new ServerSocketChannelFactory("0.0.0.0", port).build();
 
             final MessageChannel _server = server;
             final AtomicBoolean clientWasClosed = new AtomicBoolean(false);
@@ -203,7 +199,7 @@ public class ITSocketMessageChannelShould {
             StateChangeUtils.pollForCondition(() -> !_server.isClosed(), 4_000,
                     "Expected opened server; got closed one instead");
 
-            client1 = new ClientSocketChannelFactory(host, port).build().create();
+            client1 = new ClientSocketChannelFactory("127.0.0.1", port).build().create();
 
             // wait for user to connect&disconnect
             StateChangeUtils.pollForCondition(() -> {
@@ -213,7 +209,7 @@ public class ITSocketMessageChannelShould {
             }, 8_000, "Expected client 1 to be closed, but never reached that section");
             client1 = null;
 
-            client2 = new ClientSocketChannelFactory(host, port).build().create();
+            client2 = new ClientSocketChannelFactory("127.0.0.1", port).build().create();
 
             // wait for user to connect
             StateChangeUtils.pollForCondition(() -> ((ServerSocketMessageChannel)_server).isEndConnected(), 8_000,
