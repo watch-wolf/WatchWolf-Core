@@ -61,12 +61,16 @@ public class RPCConfigFile extends RPCObjectWrapper<ConfigFile> {
             int length = 0;
             int multiplier = 0;
             for (int n = 0; n < 4; n++) {
-                length |= (this.getMasterConverter().unmarshall(channel, Byte.class) << multiplier);
+                length |= (Byte.toUnsignedInt(this.getMasterConverter().unmarshall(channel, Byte.class)) << multiplier);
                 multiplier += 8;
             }
 
-            byte []file = new byte[length];
-            for (int n = 0; n < length; n++) file[n] = (byte)this.getMasterConverter().unmarshall(channel, RPCByte.class).getUnsignedObject();
+            // for performance reasons, we'll break the delegation of responsibilities
+            /*byte []file = new byte[length];
+            for (int n = 0; n < length; n++) {
+                file[n] = this.getMasterConverter().unmarshall(channel, Byte.class);
+            }*/
+            byte []file = channel.get(length);
 
             ConfigFile object = new ConfigFile(nameAndExtension, file, offsetPath);
             if (object.getExtension().equals("zip")) object = new ZipFile(nameAndExtension, file, offsetPath); // we can store it as a zip

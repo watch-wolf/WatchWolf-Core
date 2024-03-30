@@ -3,7 +3,9 @@ package dev.watchwolf.core.entities.files;
 import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.nio.file.OpenOption;
 import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
@@ -46,11 +48,10 @@ public class ZipFile extends ConfigFile {
                 }
 
                 // write file content
-                try(BufferedWriter fos = Files.newBufferedWriter(newFile)) {
+                try(OutputStream out = Files.newOutputStream(newFile)) {
                     int len;
                     while ((len = zis.read(buffer)) > 0) {
-                        charBuffer = new String(buffer, StandardCharsets.UTF_8).toCharArray();
-                        fos.write(charBuffer, 0, len);
+                        out.write(buffer, 0, len);
                     }
                 }
             }
