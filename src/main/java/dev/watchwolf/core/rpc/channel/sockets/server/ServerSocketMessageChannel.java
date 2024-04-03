@@ -1,0 +1,161 @@
+package dev.watchwolf.core.rpc.channel.sockets.server;
+
+import dev.watchwolf.core.rpc.channel.ChannelQueue;
+import dev.watchwolf.core.rpc.channel.MessageChannel;
+import dev.watchwolf.core.rpc.channel.sockets.SocketMessageChannel;
+import dev.watchwolf.core.rpc.channel.sockets.client.ClientSocketChannelFactory;
+import dev.watchwolf.core.rpc.channel.sockets.client.ClientSocketMessageChannel;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
+import java.io.IOException;
+import java.net.InetAddress;
+import java.net.ServerSocket;
+import java.net.Socket;
+import java.net.SocketTimeoutException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.TimeoutException;
+
+public class ServerSocketMessageChannel extends SocketMessageChannel {
+    /**
+     * Requested maximum length of the queue of incoming connections.
+     */
+    public static final int BACKLOG = 50;
+
+    private final Logger logger = LogManager.getLogger(ServerSocketMessageChannel.class.getName());
+
+    private ServerSocket serverSocket;
+    private List<ClientSocketMessageChannel> clients;
+
+    public ServerSocketMessageChannel(String host, int port) {
+        super(host, port);
+    }
+
+    public MessageChannel create() throws IOException {
+        this.logger.traceEntry();
+        if (this.isClosed()) {
+            // first call; initialize server
+            this.logger.info("The server socket is closed; it will be initialized now.");
+            synchronized (this) {
+                this.serverSocket = new ServerSocket(this.port, ServerSocketMessageChannel.BACKLOG, InetAddress.getByName(this.host));
+                this.clients = new ArrayList<>();
+            }
+        }
+
+        return this.logger.traceExit(this.acceptConnection());
+    }
+
+    /**
+     * Waits for a client and returns its connection.
+     * If the server closes while waiting, it will return null.
+     * @return Connection to the client (if any)
+     */
+    private MessageChannel acceptConnection() throws IOException {
+        Socket clientSocket = null;
+        this.logger.info("Waiting for client connection...");
+        while (clientSocket == null && !this.isClosed()) {
+            synchronized (this) {
+                int timeout = this.serverSocket.getSoTimeout();
+                this.serverSocket.setSoTimeout(200); // don't wait eternally
+                try {
+                    clientSocket = this.serverSocket.accept();
+                } catch (SocketTimeoutException ignore) {}
+                this.serverSocket.setSoTimeout(timeout); // restore timeout
+            }
+
+            if (clientSocket == null) {
+                try {
+                    Thread.sleep(800); // don't take all the resources!
+                } catch (InterruptedException ignore) {}
+            }
+        }
+
+        if (clientSocket == null) {
+            // couldn't get - server is closed
+            this.logger.warn("Server was closed before a connection could establish");
+            return null;
+        }
+
+        ClientSocketMessageChannel clientChannel = (ClientSocketMessageChannel) new ClientSocketChannelFactory(clientSocket.getInetAddress().getHostAddress(), clientSocket.getPort()).build();
+        clientChannel.create(clientSocket); // don't connect; re-use the connection
+        final ServerSocketMessageChannel _this = this;
+        final Socket _clientSocket = clientSocket;
+        clientChannel.addClientClosedListener(() -> {
+            // if it's the last client, close the server
+            _this.logger.info("Client closed event (" + _clientSocket.getInetAddress().getHostAddress() + ":" + _clientSocket.getPort() + ")");
+            boolean needsClosing;
+            synchronized (_this) {
+                this.clients.removeIf(ClientSocketMessageChannel::isClosed);
+                needsClosing = this.clients.isEmpty();
+            }
+
+            if (needsClosing) {
+                _this.logger.info("Last client disconnected from " + _this.serverSocket.getInetAddress().getHostAddress() + ":" + _this.serverSocket.getLocalPort() + "; closing server...");
+                try {
+                    _this.close();
+                } catch (IOException e) {
+                    throw _this.logger.throwing(new RuntimeException(e));
+                }
+            }
+        });
+
+        this.logger.info("Got client conencted to socket server: " + clientSocket.getInetAddress().getHostAddress() + ":" + clientSocket.getPort());
+
+        synchronized (this) {
+            this.clients.add(clientChannel);
+        }
+        return clientChannel;
+    }
+
+
+    @Override
+    public void send(byte[] data) throws IOException {
+        this.broadcast(data);
+    }
+
+    /**
+     * Will send the data into all the clients
+     * @param data Bytes to send
+     * @throws IOException Socket exception
+     */
+    public synchronized void broadcast(byte[] data) throws IOException {
+        this.logger.traceEntry();
+        this.clients.removeIf(ClientSocketMessageChannel::isClosed);
+        if (this.clients.isEmpty()) throw this.logger.throwing(new IOException("No target client to send"));
+
+        for (ClientSocketMessageChannel client : this.clients) client.send(data);
+        this.logger.traceExit();
+    }
+
+    @Override
+    public byte[] get(int numBytes, int timeout) throws TimeoutException, IOException {
+        throw this.logger.throwing(new UnsupportedOperationException("Use the get method from the specific client"));
+    }
+
+    @Override
+    public synchronized boolean isClosed() {
+        return (this.serverSocket == null || this.serverSocket.isClosed());
+    }
+
+    @Override
+    public synchronized boolean isEndConnected() {
+        if (this.isClosed()) return false;
+
+        return this.clients.stream().anyMatch(ClientSocketMessageChannel::isEndConnected);
+    }
+
+    @Override
+    public synchronized void close() throws IOException {
+        this.logger.traceEntry();
+        this.logger.info("Closing server " + this.serverSocket.getInetAddress().getHostAddress() + ":" + this.serverSocket.getLocalPort() + "...");
+        if (this.clients != null) {
+            for (ClientSocketMessageChannel client : new ArrayList<>(this.clients)) client.close();
+            this.clients.clear(); // no connection
+        }
+
+        if (this.serverSocket != null) this.serverSocket.close();
+        this.logger.info("Server closed.");
+        this.logger.traceExit();
+    }
+}
