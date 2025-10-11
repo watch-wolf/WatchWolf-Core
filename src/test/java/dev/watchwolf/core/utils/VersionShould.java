@@ -15,6 +15,15 @@ public class VersionShould {
     }
 
     @Test
+    public void expectLessThanOnSmallerSubversions() throws Exception {
+        Version checking = new Version("1.13"),
+                comparedTo = new Version("1.13.1");
+
+        assertTrue(checking.compareTo(comparedTo) < 0);
+        assertTrue(checking.roundTo(3).compareTo(comparedTo) < 0);
+    }
+
+    @Test
     public void expectGreaterThanOnGreaterVersions() throws Exception {
         Version checking = new Version("1.20"),
                 comparedTo = new Version("1.19");

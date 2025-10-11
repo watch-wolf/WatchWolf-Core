@@ -2,8 +2,7 @@ package dev.watchwolf.core.utils;
 
 public class DockerUtilities {
     public static int getJavaVersion(String mcVersionStr) {
-        Version mcVersion = new Version(mcVersionStr);
-        int result = mcVersion.roundTo(2).compareTo("1.17");
+        int result = new Version(mcVersionStr).roundTo(2).compareTo("1.17");
         if (result < 0) {
             // prior to 1.17
             return 8;
@@ -13,8 +12,16 @@ public class DockerUtilities {
             return 16;
         }
         else {
-            // after 1.17
-            return 17;
+            // more or equal to 1.18
+            result = new Version(mcVersionStr).roundTo(3).compareTo("1.20.5");
+            if (result < 0) {
+                // between 1.18 and 1.20.4
+                return 17;
+            }
+            else {
+                // 1.20.5 and later
+                return 21;
+            }
         }
     }
 }

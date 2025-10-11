@@ -21,9 +21,16 @@ public class DockerUtilitiesShould {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"1.18", "1.20.4"})
-    public void returnJava17ForNewMinecraftVersions(String version) throws Exception {
+    @ValueSource(strings = {"1.18", "1.19", "1.20.4"})
+    public void returnJava176ForMinecraft18To20Dot4(String version) throws Exception {
         int jre = DockerUtilities.getJavaVersion(version);
         assertEquals(17, jre, "Failed while comparing return of version " + version);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"1.20.5", "1.20.6", "1.21", "1.21.10"})
+    public void returnJava21ForNewMinecraftVersions(String version) throws Exception {
+        int jre = DockerUtilities.getJavaVersion(version);
+        assertEquals(21, jre, "Failed while comparing return of version " + version);
     }
 }
