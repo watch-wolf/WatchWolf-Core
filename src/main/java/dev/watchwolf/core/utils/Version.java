@@ -24,11 +24,13 @@ public class Version implements Comparable<Version> {
      * @return This
      */
     public Version roundTo(int places) {
-        if (places == 0) throw new IllegalArgumentException("At least 1 digit must be present.");
+        if (places < 1) throw new IllegalArgumentException("At least 1 digit must be present.");
         String []segments = this.get().split("\\.");
 
         this.version = segments[0];
-        for (int digit = 1; digit < places; digit++) this.version += "." + segments[digit];
+        for (int digit = 1; digit < places; digit++) {
+            this.version += "." + ((digit < segments.length) ? segments[digit] : "0");
+        }
 
         return this;
     }
