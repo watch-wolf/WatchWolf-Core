@@ -116,3 +116,12 @@ There are two generations of the shared library in the wild:
 
 The two class trees are near-duplicates (both carry the same 562 generated block classes). When
 changing an entity, check whether the Tester copy needs the same change.
+
+## Git conventions
+
+- **`dev` is the working branch.** Every WatchWolf repo integrates and releases from `dev`.
+  `master` (`main` in the WatchWolf standard repo) is downstream of it — never commit there
+  directly, and never open a PR against it.
+- **One branch per change, named for its kind:** `fix/<topic>` for defects, `feature/<topic>` for
+  new work. Branch from `dev`.
+- **Always open a PR into `dev`.** Do not push straight to `dev`, even for a one-line change.
