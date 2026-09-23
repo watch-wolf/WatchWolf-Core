@@ -104,18 +104,12 @@ short operation  = (short)(info >> 4);
 `UnsupportedOperationException` when no converter claims a type. Adding a new argument type means
 adding an `RPCObject` under `core/rpc/objects/types/` **and** registering its subconverter.
 
-## Migration state
+## Shared dependency
 
-There are two generations of the shared library in the wild:
-
-- **New:** this repo — `dev.watchwolf.core.*`, socket RPC, code-generated stubs. Used by
-  WatchWolf-ServersManager.
-- **Old:** `dev.watchwolf.entities.*` / `dev.watchwolf.tester.*`, which still lives inside
-  [WatchWolf-Tester](https://github.com/miranda1000/WatchWolf-Tester) and is what
-  WatchWolf-Server links against (`lib/watchwolf-tester-0.2.1.jar`).
-
-The two class trees are near-duplicates (both carry the same 562 generated block classes). When
-changing an entity, check whether the Tester copy needs the same change.
+This repo is the single source of truth for shared entities, petitions, and socket protocol
+serialization. WatchWolf-Tester and WatchWolf-Server depend on this artifact instead of carrying
+their own `dev.watchwolf.entities.*` copies. Changes to the wire format must remain compatible
+across all three components.
 
 ## Git conventions
 

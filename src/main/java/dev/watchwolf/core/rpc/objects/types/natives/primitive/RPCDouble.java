@@ -47,7 +47,7 @@ public class RPCDouble extends NativeTypeRPCObject<Double> {
         @Override
         protected RPCDouble performUnmarshall(MessageChannel channel, ClassType<? extends RPCDouble> type) throws IOException {
             long lng = 0;
-            for (int i = 0; i < 8; i++) lng = (lng << 8) | channel.get();
+            for (int i = 0; i < 8; i++) lng = (lng << 8) | (channel.get() & 0xFFL);
             return new RPCDouble(Double.longBitsToDouble(lng));
         }
 

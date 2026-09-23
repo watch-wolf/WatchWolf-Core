@@ -84,7 +84,7 @@ modules take the simpler route: drop the jar into `lib/` and let Maven install i
 <dependency>
     <groupId>dev.watchwolf</groupId>
     <artifactId>watchwolf-core</artifactId>
-    <version>0.3.2</version>
+    <version>0.3.3</version>
 </dependency>
 ```
 
@@ -92,4 +92,4 @@ modules take the simpler route: drop the jar into `lib/` and let Maven install i
 
 - [WatchWolf](https://github.com/watch-wolf/WatchWolf) — the protocol specification
 - [WatchWolf-ServersManager](https://github.com/miranda1000/WatchWolf-ServersManager) — first consumer
-- [WatchWolf-Tester](https://github.com/miranda1000/WatchWolf-Tester) — still ships the previous generation of these classes under `dev.watchwolf.entities.*`
+- [WatchWolf-Tester](https://github.com/miranda1000/WatchWolf-Tester) — consumes the shared entities and protocol helpers from this library

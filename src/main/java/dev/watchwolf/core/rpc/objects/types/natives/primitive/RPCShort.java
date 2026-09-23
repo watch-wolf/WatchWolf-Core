@@ -47,8 +47,8 @@ public class RPCShort extends NativeTypeRPCObject<Short> {
 
         @Override
         protected RPCShort performUnmarshall(MessageChannel channel, ClassType<? extends RPCShort> type) throws IOException {
-            int lsb = channel.get(),
-                msb = channel.get();
+            int lsb = channel.get() & 0xFF,
+                msb = channel.get() & 0xFF;
             return new RPCShort((short)(msb << 8 | lsb));
         }
 
