@@ -84,7 +84,7 @@ modules take the simpler route: drop the jar into `lib/` and let Maven install i
 <dependency>
     <groupId>dev.watchwolf</groupId>
     <artifactId>watchwolf-core</artifactId>
-    <version>0.3.1</version>
+    <version>0.3.2</version>
 </dependency>
 ```
 
