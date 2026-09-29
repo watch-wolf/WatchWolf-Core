@@ -57,6 +57,8 @@ public class RPCConverter<T extends RPCObject> {
 
     @SuppressWarnings("NullAway")
     public <O> O unwrap(RPCObject obj, ClassType<O> type) {
+        if (type.isAssignableFrom(RPCObject.class)) return type.cast(obj);
+
         ClassType<? extends RPCObject> objType = ClassTypeFactory.getType(obj);
         if (this.canLocallyUnwrap(objType)) {
             try {
