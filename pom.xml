@@ -246,8 +246,8 @@
     <distributionManagement>
         <repository>
             <id>github</id>
-            <name>GitHub rogermiranda1000 Apache Maven Packages</name>
-            <url>https://maven.pkg.github.com/rogermiranda1000/watchwolf-core</url>
+            <name>GitHub watch-wolf Apache Maven Packages</name>
+            <url>https://maven.pkg.github.com/watch-wolf/watchwolf-core</url>
         </repository>
     </distributionManagement>
 </project>
